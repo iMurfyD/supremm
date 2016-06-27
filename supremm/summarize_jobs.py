@@ -172,8 +172,9 @@ def summarizejob(job, conf, resconf, plugins, preprocs, m, dblog, opts):
         logging.error("Failure for job %s %s. Error: %s %s", job.job_id, job.jobdir, str(e), traceback.format_exc())
 
     if opts['dodelete'] and job.jobdir != None and os.path.exists(job.jobdir):
+        pass
         # Clean up
-        shutil.rmtree(job.jobdir)
+        #shutil.rmtree(job.jobdir)
 
     return success
 

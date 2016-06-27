@@ -66,7 +66,7 @@ def extract_and_merge_logs(job, conf, resconf):
     """ merge all of the raw pcp archives into one archive per node for each
         node in the job """
 
-    adjust_job_start_end(job)
+    #adjust_job_start_end(job)
 
     return pmlogextract(job, conf, resconf)
 
@@ -124,26 +124,28 @@ def pmlogextract(job, conf, resconf):
 
     # Generate the path to the job's log directory.
     jobdir = genoutputdir(job, conf, resconf)
-
-    if os.path.exists(jobdir):
-        try:
-            shutil.rmtree(jobdir)
-            logging.debug("Job directory %s existed and was deleted.", jobdir)
-        except EnvironmentError:
-            pass
+    
+    logging.debug("output dir is %s", jobdir)
+    #if os.path.exists(jobdir):
+    #    try:
+    #        shutil.rmtree(jobdir)
+    #        logging.debug("Job directory %s existed and was deleted.", jobdir)
+    #    except EnvironmentError:
+    #        pass
 
     # Create the directory the job logs will be stored in. If an error
     # occurs, log an error and stop.
-    try:
-        os.makedirs(jobdir)
-    except EnvironmentError:
-        logging.error("Job directory %s could not be created.", jobdir)
-        return 1
+    #try:
+    #    os.makedirs(jobdir)
+    #except EnvironmentError:
+    #    logging.error("Job directory %s could not be created.", jobdir)
+    #    return 1
 
     job.setjobdir(jobdir)
 
     # For every node the job ran on...
     node_error = 0
+
     for nodename, nodearchives in job.rawarchives():
 
         # Merge the job logs for the node.
@@ -151,15 +153,15 @@ def pmlogextract(job, conf, resconf):
         pcp_cmd = getextractcmdline(job.getnodebegin(nodename), job.getnodeend(nodename), nodearchives, node_archive)
 
         logging.debug("Calling %s", " ".join(pcp_cmd))
-        proc = subprocess.Popen(pcp_cmd, stderr=subprocess.PIPE)
+        #        proc = subprocess.Popen(pcp_cmd, stderr=subprocess.PIPE)
 
-        (_, errdata) = proc.communicate()
+        #        (_, errdata) = proc.communicate()
 
-        if errdata != None and len(errdata) > 0:
+        if False:#errdata != None and len(errdata) > 0:
             logging.warning(errdata)
             job.record_error(errdata)
 
-        if proc.returncode:
+        if False: #proc.returncode:
             errmsg = "pmlogextract return code: %s source command was: %s" % (proc.returncode, " ".join(pcp_cmd))
             logging.warning(errmsg)
             node_error -= 1

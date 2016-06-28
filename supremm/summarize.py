@@ -55,6 +55,7 @@ class Summarize(object):
         else:
             self.errors[category].add(errormsg)
 
+    @profile
     def process(self):
         """ Main entry point. All archives are processed """
         success = 0
@@ -202,6 +203,7 @@ class Summarize(object):
             return object
         return numpy.float
 
+    @profile
     def runcallback(self, analytic, result, mtypes, ctx, mdata, metric_id_array):
         """ get the data and call the analytic """
 
@@ -214,6 +216,7 @@ class Summarize(object):
 
         data = []
         description = []
+        pcpFastExtractValues = pcpfast.pcpfastExtractValues # So cached local copy of function will be called
 
         for i in xrange(result.contents.numpmid):
             ninstances = result.contents.get_numval(i)
@@ -227,7 +230,7 @@ class Summarize(object):
             tmpidx = numpy.empty(ninstances, dtype=long)
 
             for j in xrange(ninstances):
-                pcpdata = pcpfast.pcpfastExtractValues(result, i, j, mtypes[i])
+                pcpdata = pcpFastExtractValues(result, i, j, mtypes[i])
                 tmp[j] = pcpdata[0]
                 if pcpdata[1] > -1:
                     tmpidx[j] = pcpdata[1]
@@ -255,6 +258,7 @@ class Summarize(object):
             self.logerror(mdata.nodename, analytic.name, str(e))
             return False
 
+    @profile
     def runpreproccall(self, preproc, result, mtypes, ctx, mdata, metric_id_array):
         """ Call the pre-processor data processing function """
 
@@ -263,12 +267,13 @@ class Summarize(object):
             return True
 
         data = []
+        pcpFastExtractValues = pcpfast.pcpfastExtractValues # Cached copy of external c function
         for i in xrange(result.contents.numpmid):
-            data.append(numpy.array([pcpfast.pcpfastExtractValues(result, i, j, mtypes[i])
+            data.append(numpy.array([pcpFastExtractValues(result, i, j, mtypes[i])
                                      for j in xrange(result.contents.get_numval(i))]))
 
         return preproc.process(float(result.contents.timestamp), data, description)
-
+    
     @staticmethod
     def getindomdict(ctx, metric_id_array):
         """ build a list of dicts that contain the instance domain id to text mappings
@@ -299,6 +304,7 @@ class Summarize(object):
 
         return indomdict
 
+    @profile
     def processforpreproc(self, ctx, mdata, preproc):
         """ fetch the data from the archive, reformat as a python data structure
         and call the analytic process function """
@@ -336,6 +342,7 @@ class Summarize(object):
         preproc.status = "complete"
         preproc.hostend()
 
+    @profile
     def processforanalytic(self, ctx, mdata, analytic):
         """ fetch the data from the archive, reformat as a python data structure
         and call the analytic process function """
@@ -382,6 +389,7 @@ class Summarize(object):
         logging.debug("archive processing exception: %s %s %s", archive, analyticname, pmerrorcode)
         self.adderror("archive", "{0} {1} {2}".format(archive, analyticname, pmerrorcode))
 
+    @profile
     def processfirstlast(self, ctx, mdata, analytic):
         """ fetch the data from the archive, reformat as a python data structure
         and call the analytic process function """
@@ -427,7 +435,8 @@ class Summarize(object):
             else:
                 logging.exception("%s", analytic.name)
                 raise e
-
+   
+    @profile 
     def processarchive(self, nodename, nodeidx, archive):
         """ process the archive """
         context = pmapi.pmContext(c_pmapi.PM_CONTEXT_ARCHIVE, archive)

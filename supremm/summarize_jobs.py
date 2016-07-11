@@ -174,7 +174,7 @@ def summarizejob(job, conf, resconf, plugins, preprocs, m, dblog, opts):
     if opts['dodelete'] and job.jobdir != None and os.path.exists(job.jobdir):
         pass
         # Clean up
-        #shutil.rmtree(job.jobdir)
+        shutil.rmtree(job.jobdir)
 
     return success
 

@@ -55,7 +55,6 @@ class Summarize(object):
         else:
             self.errors[category].add(errormsg)
 
-    @profile
     def process(self):
         """ Main entry point. All archives are processed """
         success = 0
@@ -203,7 +202,6 @@ class Summarize(object):
             return object
         return numpy.float
 
-    @profile
     def runcallback(self, analytic, result, mtypes, ctx, mdata, metric_id_array):
         """ get the data and call the analytic """
 
@@ -258,7 +256,6 @@ class Summarize(object):
             self.logerror(mdata.nodename, analytic.name, str(e))
             return False
 
-    @profile
     def runpreproccall(self, preproc, result, mtypes, ctx, mdata, metric_id_array):
         """ Call the pre-processor data processing function """
 
@@ -304,7 +301,6 @@ class Summarize(object):
 
         return indomdict
 
-    @profile
     def processforpreproc(self, ctx, mdata, preproc):
         """ fetch the data from the archive, reformat as a python data structure
         and call the analytic process function """
@@ -342,7 +338,6 @@ class Summarize(object):
         preproc.status = "complete"
         preproc.hostend()
 
-    @profile
     def processforanalytic(self, ctx, mdata, analytic):
         """ fetch the data from the archive, reformat as a python data structure
         and call the analytic process function """
@@ -389,7 +384,6 @@ class Summarize(object):
         logging.debug("archive processing exception: %s %s %s", archive, analyticname, pmerrorcode)
         self.adderror("archive", "{0} {1} {2}".format(archive, analyticname, pmerrorcode))
 
-    @profile
     def processfirstlast(self, ctx, mdata, analytic):
         """ fetch the data from the archive, reformat as a python data structure
         and call the analytic process function """
@@ -436,7 +430,6 @@ class Summarize(object):
                 logging.exception("%s", analytic.name)
                 raise e
    
-    @profile 
     def processarchive(self, nodename, nodeidx, archive):
         """ process the archive """
         context = pmapi.pmContext(c_pmapi.PM_CONTEXT_ARCHIVE, archive)

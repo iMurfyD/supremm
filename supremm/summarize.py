@@ -9,6 +9,7 @@ import time
 import logging
 import traceback
 from supremm.plugin import NodeMetadata
+import puffypcp
 
 import numpy
 import copy
@@ -117,7 +118,6 @@ class Summarize(object):
             result = preproc.results()
             if result != None:
                 output.update(result)
-
         for source, data in self.job.data().iteritems():
             if 'errors' in data:
                 self.adderror(source, str(data['errors']))
@@ -132,16 +132,7 @@ class Summarize(object):
     @staticmethod
     def loadrequiredmetrics(context, requiredMetrics):
         """ required metrics are those that must be present for the analytic to be run """
-        try:
-            required = context.pmLookupName(requiredMetrics)
-            return [required[i] for i in xrange(0, len(required))]
-
-        except pmapi.pmErr as e:
-            if e.args[0] == c_pmapi.PM_ERR_NAME:
-                # Required metric missing - this analytic cannot run on this archive
-                return []
-            else:
-                raise e
+        return puffypcp.loadrequiredmetrics(context, requiredMetrics)
 
     @staticmethod
     def getmetricstofetch(context, analytic):
@@ -207,7 +198,7 @@ class Summarize(object):
 
         if self.indomcache == None:
             # First time through populate the indom cache
-            self.indomcache = self.getindomdict(ctx, metric_id_array)
+            self.indomcache = puffypcp.getindomdict(ctx, metric_id_array)
             if self.indomcache == None:
                 # Unable to get indom information
                 return False
@@ -259,7 +250,7 @@ class Summarize(object):
     def runpreproccall(self, preproc, result, mtypes, ctx, mdata, metric_id_array):
         """ Call the pre-processor data processing function """
 
-        description = self.getindomdict(ctx, metric_id_array)
+        description = puffypcp.getindomdict(ctx, metric_id_array)
         if description == None:
             return True
 
@@ -314,7 +305,7 @@ class Summarize(object):
             preproc.hostend()
             return
 
-        mtypes = self.getmetrictypes(ctx, metric_id_array)
+        mtypes = puffypcp.getmetrictypes(ctx, metric_id_array)
 
         done = False
 
@@ -342,13 +333,13 @@ class Summarize(object):
         """ fetch the data from the archive, reformat as a python data structure
         and call the analytic process function """
 
-        metric_id_array = self.getmetricstofetch(ctx, analytic)
+        metric_id_array = puffypcp.getmetricstofetch(ctx, analytic)
 
         if len(metric_id_array) == 0:
             logging.debug("Skipping %s (%s)" % (type(analytic).__name__, analytic.name))
             return
 
-        mtypes = self.getmetrictypes(ctx, metric_id_array)
+        mtypes = puffypcp.getmetrictypes(ctx, metric_id_array)
         self.indomcache = None
 
         done = False
@@ -388,12 +379,12 @@ class Summarize(object):
         """ fetch the data from the archive, reformat as a python data structure
         and call the analytic process function """
 
-        metric_id_array = self.getmetricstofetch(ctx, analytic)
+        metric_id_array = puffypcp.getmetricstofetch(ctx, analytic)
 
         if len(metric_id_array) == 0:
             return
 
-        mtypes = self.getmetrictypes(ctx, metric_id_array)
+        mtypes = puffypcp.getmetrictypes(ctx, metric_id_array)
         self.indomcache = None
 
         try:

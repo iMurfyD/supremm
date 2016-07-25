@@ -21,7 +21,7 @@ setup(name='supremm',
       author='Joseph P White',
       author_email='jpwhite4@buffalo.edu',
       url='https://github.com/ubccr/supremm',
-      packages=['supremm', 'supremm.pcpfast', 'supremm.plugins', 'supremm.preprocessors', 'supremm.puffypcp'],
+      packages=['supremm', 'supremm.pcpfast', 'supremm.plugins', 'supremm.preprocessors'],
       data_files=[(confpath,                         ['config/config.json']),
                   ('share/supremm/templates/slurm',       ['config/templates/slurm/slurm-epilog',  'config/templates/slurm/slurm-prolog']),
                   ('share/supremm/templates/pmlogger',    ['config/templates/pmlogger/control',    'config/templates/pmlogger/pmlogger-supremm.config']),
@@ -41,5 +41,6 @@ setup(name='supremm',
                 'MySQLdb',
                 'pcp'],
       cmdclass = {'build_ext': build_ext},
-      ext_modules=[Extension("puffypcp", ["supremm/puffypcp/puffypcp.pyx"])]
+      ext_modules=[Extension("supremm.puffypcp", ["supremm/puffypcp/puffypcp.pyx"], libraries=['pcp']),
+                   Extension('supremm.pcpfast.libpcpfast', ['supremm/pcpfast/pcpfast.c'], libraries=['pcp'])]
      )

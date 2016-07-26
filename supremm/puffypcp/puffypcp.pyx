@@ -179,31 +179,27 @@ def extractValues(context, result, py_metric_id_array, mtypes):
         status = pcp.pmLookupDesc(metric_id_array[i], &metric_desc) 
         if status < 0:
             return None, None
-        if 4294967295 != metric_desc.indom:
-            status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
-            if status < 0: # TODO - add specific responses for different errors
-                free(metric_id_array) 
-                return None, None
-            else:
-                tmp_names = []
-                tmp_idx = numpy.empty(status, dtype=long)
-                dtype = mtypes[i] 
-                
-                if res.vset[i].numval == status:
-                    data.append(extractValuesInnerLoop(status, res, dtype, i))
-                    for j in xrange(status):
-                        tmp_idx[j] = res.vset[i].vlist[j].inst
-                        # TODO - find way to just look for one name not generate list then find it in list
-                        for k in xrange(status):
-                            if ivals[k] == res.vset[i].vlist[j].inst:
-                                tmp_names.append(inames[k])             
-                    description.append([tmp_idx, tmp_names])
-
-                free(ivals)
-                free(inames)
+        status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
+        if status < 0: # TODO - add specific responses for different errors
+            free(metric_id_array) 
+            return None, None
         else:
-            description.append([])
-            data.append(numpy.array([]))
+            tmp_names = []
+            tmp_idx = numpy.empty(status, dtype=long)
+            dtype = mtypes[i] 
+            
+            if res.vset[i].numval == status:
+                data.append(extractValuesInnerLoop(status, res, dtype, i))
+                for j in xrange(status):
+                    tmp_idx[j] = res.vset[i].vlist[j].inst
+                    # TODO - find way to just look for one name not generate list then find it in list
+                    for k in xrange(status):
+                        if ivals[k] == res.vset[i].vlist[j].inst:
+                            tmp_names.append(inames[k])             
+                description.append([tmp_idx, tmp_names])
+
+            free(ivals)
+            free(inames)
 
     free(metric_id_array)
 

@@ -14,8 +14,6 @@ import puffypcp
 import numpy
 import copy
 
-import pdb
-
 VERSION = "1.0.5"
 TIMESERIES_VERSION = 4
 
@@ -134,49 +132,10 @@ class Summarize(object):
     def runcallback(self, analytic, result, mtypes, ctx, mdata, metric_id_array):
         """ get the data and call the analytic """
 
-        if self.indomcache == None:
-            # First time through populate the indom cache
-            self.indomcache = puffypcp.getindomdict(ctx, metric_id_array)
-            if self.indomcache == None:
-                # Unable to get indom information
-                return False
-
-        data = []
-        description = []
-        pcpFastExtractValues = pcpfast.pcpfastExtractValues # So cached local copy of function will be called
-
-        for i in xrange(result.contents.numpmid):
-            ninstances = result.contents.get_numval(i)
-            if ninstances < 0:
-                logging.warning("%s %s ninstances = %s @ %s", mdata.nodename, analytic.name, ninstances, float(result.contents.timestamp))
-                self.logerror(mdata.nodename, analytic.name, "get_numval() error")
-                return False
-
-            tmp = numpy.empty(ninstances, dtype=puffypcp.pcptypetonumpy(mtypes[i]))
-            tmpnames = []
-            tmpidx = numpy.empty(ninstances, dtype=long)
-
-            for j in xrange(ninstances):
-                pcpdata = pcpFastExtractValues(result, i, j, mtypes[i])
-                tmp[j] = pcpdata[0]
-                if pcpdata[1] > -1:
-                    tmpidx[j] = pcpdata[1]
-                    if pcpdata[1] not in self.indomcache[i]:
-                        # indoms must have changed; rebuild the cache
-                        self.indomcache = puffypcp.getindomdict(ctx, metric_id_array)
-                        if self.indomcache == None:
-                            return False
-                    if pcpdata[1] not in self.indomcache[i]:
-                        # Unable to get indom information for one of the instance domains
-                        # Ignore this timestep, but carry on
-                        logging.warning("%s %s missing indom @ %s", mdata.nodename, analytic.name, float(result.contents.timestamp))
-                        self.logerror(mdata.nodename, analytic.name, "missing indom")
-                        return True
-                    tmpnames.append(self.indomcache[i][pcpdata[1]])
-
-            data.append(tmp)
-            description.append([tmpidx, tmpnames])
-
+        data, description = puffypcp.extractValues(ctx, result, metric_id_array, mtypes)
+       
+        import pdb; pdb.set_trace()
+ 
         try:
             retval = analytic.process(mdata, float(result.contents.timestamp), data, description)
             return retval
@@ -199,7 +158,6 @@ class Summarize(object):
         #                             for j in xrange(result.contents.get_numval(i))]))
 
         data, description = puffypcp.extractpreprocValues(ctx, result, metric_id_array, mtypes)
-        pdb.set_trace()
 
         return preproc.process(float(result.contents.timestamp), data, description)
     

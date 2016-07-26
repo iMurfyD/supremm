@@ -2,11 +2,10 @@ from pcp import pmapi
 from libc.stdlib cimport malloc, free
 import cpmapi as c_pmapi
 import numpy
-import ctypes
 from ctypes import c_uint
-from ctypes import addressof
 
 cimport pcp
+cimport numpy
 
 cdef extern from "Python.h":
     ctypedef struct Py_buffer:
@@ -14,8 +13,13 @@ cdef extern from "Python.h":
     int PyBUF_SIMPLE
     int PyObject_GetBuffer(object, Py_buffer*, int)  
 
+# Just so it will compile - not sure if these are the acutal definitions
 cdef extern from "inttypes.h":
-    ctypedef intptr_t
+    ctypedef intptr_t 
+    ctypedef int int32_t 
+    ctypedef unsigned int uint32_t 
+    ctypedef long int64_t 
+    ctypedef unsigned long uint64_t 
 
 cdef object topyobj(pcp.pmAtomValue atom, int dtype):
     if dtype == pcp.PM_TYPE_STRING:
@@ -28,8 +32,162 @@ cdef object topyobj(pcp.pmAtomValue atom, int dtype):
         return long(atom.ll)
     elif dtype == pcp.PM_TYPE_U64:
         return long(atom.ull)
+    elif dtype == pcp.PM_TYPE_DOUBLE:
+        return long(atom.d)
     else: # Don't know how to handle data type
         return long(atom.cp)
+
+cdef object strinnerloop(int numval, pcp.pmResult* res, int i):
+    cdef Py_ssize_t j
+    cdef pcp.pmAtomValue atom
+    tmp_data = list()
+    for j in xrange(status):
+       status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_STRING, &atom, pcp.PM_TYPE_STRING)
+       if status < 0:
+           print "Couldn't extract value"
+           return []
+       tmp_data.append(str(atom.cp))
+    return tmp_data
+
+cdef numpy.ndarray[int32_t, ndim=1, mode="c"] int32innerloop(int numval, pcp.pmResult* res, int i):
+    cdef Py_ssize_t j
+    cdef pcp.pmAtomValue atom
+    cdef numpy.ndarray[int32_t, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.int32)
+    cdef int32_t* tmp_datap = &tmp_data[0]
+    for j in xrange(status):
+       status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_32, &atom, pcp.PM_TYPE_32)
+       if status < 0:
+           print "Couldn't extract value"
+           return numpy.empty(0, dtype=numpy.int32)
+       tmp_datap[j] = atom.l
+    return tmp_data
+
+cdef numpy.ndarray[uint32_t, ndim=1, mode="c"] uint32innerloop(int numval, pcp.pmResult* res, int i):
+    cdef Py_ssize_t j
+    cdef pcp.pmAtomValue atom
+    cdef numpy.ndarray[uint32_t, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.uint32)
+    cdef uint32_t* tmp_datap = &tmp_data[0]
+    for j in xrange(status):
+       inst = res.vset[i].vlist[j].inst 
+       status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_U32, &atom, pcp.PM_TYPE_U32)
+       if status < 0:
+           print "Couldn't extract value"
+           return numpy.empty(0, dtype=numpy.uint32)
+       tmp_datap[j] = atom.ul
+    return tmp_data
+
+cdef numpy.ndarray[int64_t, ndim=1, mode="c"] int64innerloop(int numval, pcp.pmResult* res, int i):
+    cdef Py_ssize_t j
+    cdef pcp.pmAtomValue atom
+    cdef numpy.ndarray[int64_t, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.int64)
+    cdef int64_t* tmp_datap = &tmp_data[0]
+    for j in xrange(status):
+       inst = res.vset[i].vlist[j].inst 
+       status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_64, &atom, pcp.PM_TYPE_64)
+       if status < 0:
+           print "Couldn't extract value"
+           return numpy.empty(0, dtype=numpy.int64)
+       tmp_datap[j] = atom.ll
+    return tmp_data
+
+cdef numpy.ndarray[uint64_t, ndim=1, mode="c"] uint64innerloop(int numval, pcp.pmResult* res, int i):
+    cdef Py_ssize_t j
+    cdef pcp.pmAtomValue atom
+    cdef numpy.ndarray[uint64_t, ndim=1, mode="c"] tmp_data = numpy.empty(numval, numpy.uint64)
+    cdef uint64_t* tmp_datap = &tmp_data[0]
+    for j in xrange(status):
+       inst = res.vset[i].vlist[j].inst 
+       status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_U64, &atom, pcp.PM_TYPE_U64)
+       if status < 0:
+           print "Couldn't extract value"
+           return numpy.empty(0, dtype=numpy.uint64)
+       tmp_datap[j] = atom.ull
+    return tmp_data
+
+cdef numpy.ndarray[double, ndim=1, mode="c"] doubleinnerloop(int numval, pcp.pmResult* res, int i):
+    cdef Py_ssize_t j
+    cdef pcp.pmAtomValue atom
+    cdef numpy.ndarray[double, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.double)
+    cdef double* tmp_datap = &tmp_data[0]
+    for j in xrange(status):
+       inst = res.vset[i].vlist[j].inst 
+       status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_DOUBLE, &atom, pcp.PM_TYPE_DOUBLE)
+       if status < 0:
+           print "Couldn't extract value"
+           return numpy.empty(0, dtype=numpy.double)
+       tmp_datap[j] = atom.d
+    return tmp_data
+
+cdef object extractValuesInnerLoop(Py_ssize_t numval, pcp.pmResult* res, int dtype, int i):
+    if dtype == pcp.PM_TYPE_STRING:
+        return strinnerloop(numval, res, i) 
+    elif dtype == pcp.PM_TYPE_32:
+        return int32innerloop(numval, res, i)
+    elif dtype == pcp.PM_TYPE_U32:
+        return uint32innerloop(numval, res, i)
+    elif dtype == pcp.PM_TYPE_64:
+        return int64innerloop(numval, res, i)
+    elif dtype == pcp.PM_TYPE_U64:
+        return uint64innerloop(numval, res, i)
+    elif dtype == pcp.PM_TYPE_DOUBLE:
+        return doubleinnerloop(numval, res, i)
+    else: # Don't know how to handle data type
+        print "Don't know how to handle data type"
+        return []
+
+def extractValues(context, result, py_metric_id_array, mtypes):
+    data = []
+    description = []
+  
+    cdef Py_buffer buf
+    PyObject_GetBuffer(result.contents, &buf, PyBUF_SIMPLE)
+    cdef pcp.pmResult* res = <pcp.pmResult*> buf.buf
+    cdef int mid_len = len(py_metric_id_array)
+    cdef pcp.pmID* metric_id_array = <pcp.pmID*>malloc(mid_len * sizeof(pcp.pmID))
+    cdef Py_ssize_t i, j, k
+    cdef int ctx = context._ctx
+    cdef int status, inst
+    cdef int* ivals
+    cdef char** inames
+    cdef pcp.pmDesc metric_desc
+    cdef pcp.pmAtomValue atom
+    cdef int dtype
+    for i in xrange(mid_len):
+        metric_id_array[i] = py_metric_id_array[i] # Implicit py object to c data type conversion
+    pcp.pmUseContext(ctx)
+      
+    for i in xrange(mid_len):
+        pcp.pmLookupDesc(metric_id_array[i], &metric_desc) 
+        if 4294967295 != metric_desc.indom:
+            status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
+            if status < 0: # TODO - add specific responses for different errors
+                description.append([])
+                data.append(numpy.array([]))
+            else:
+                tmp_names = []
+                tmp_idx = numpy.empty(status, dtype=long)
+                dtype = mtypes[i] 
+                
+                for j in xrange(status):
+                    tmp_idx[j] = res.vset[i].vlist[j].inst
+                    # TODO - find way to just look for one name not generate list then find it in list
+                    for k in xrange(status):
+                        if ivals[k] == res.vset[i].vlist[j].inst:
+                            tmp_names.append(inames[i])             
+
+                if res.vset[i].numval == status:
+                    data.append(extractValuesInnerLoop(status, res, dtype, i))
+
+                description.append([tmp_idx, tmp_names])
+                free(ivals)
+                free(inames)
+        else:
+            description.append([])
+            data.append(numpy.array([]))
+
+    free(metric_id_array)
+
+    return data, description
 
 def extractpreprocValues(context, result, py_metric_id_array, mtypes):
     data = []
@@ -40,7 +198,7 @@ def extractpreprocValues(context, result, py_metric_id_array, mtypes):
     cdef pcp.pmResult* res = <pcp.pmResult*> buf.buf
     cdef int mid_len = len(py_metric_id_array)
     cdef pcp.pmID* metric_id_array = <pcp.pmID*>malloc(mid_len * sizeof(pcp.pmID))
-    cdef Py_ssize_t i, j, k
+    cdef Py_ssize_t i, j
     cdef int ctx = context._ctx
     cdef int status, inst
     cdef int* ivals
@@ -64,18 +222,21 @@ def extractpreprocValues(context, result, py_metric_id_array, mtypes):
                 tmp_data = []
                 dtype = mtypes[i] 
 
-                for j in xrange(status):
-                    tmp_dict[ivals[j]] = inames[j]
-                    if res.vset[i].numval > 0:
+                if res.vset[i].numval == status:
+                    for j in xrange(status):
+                        tmp_dict[ivals[j]] = inames[j]
                         inst = res.vset[i].vlist[j].inst 
                         status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], dtype, &atom, dtype)
                         if status < 0:
                             print "Couldn't extract value"
                             return [], []
-                        tmp_data.append(topyobj(atom, dtype))
+                        tmp_data.append([topyobj(atom, dtype), inst])
+                else:
+                    for j in xrange(status):
+                        tmp_dict[ivals[j]] = inames[j]
 
                 description.append(tmp_dict)
-                data.append(numpy.array(tmp_data))
+                data.append(tmp_data)
                 free(ivals)
                 free(inames)
         else:
@@ -83,7 +244,6 @@ def extractpreprocValues(context, result, py_metric_id_array, mtypes):
             data.append(numpy.array([]))
 
     free(metric_id_array)
-
 
     return data, description
  

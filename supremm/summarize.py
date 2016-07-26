@@ -134,8 +134,6 @@ class Summarize(object):
 
         data, description = puffypcp.extractValues(ctx, result, metric_id_array, mtypes)
        
-        import pdb; pdb.set_trace()
- 
         try:
             retval = analytic.process(mdata, float(result.contents.timestamp), data, description)
             return retval

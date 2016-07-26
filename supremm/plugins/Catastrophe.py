@@ -22,6 +22,8 @@ class Catastrophe(Plugin):
 
     def process(self, nodemeta, timestamp, data, description):
 
+        print data
+
         if len(data[1]) > 0 and data[1][0] == 0:
             self._error = ProcessingError.RAW_COUNTER_UNAVAILABLE
             return False

@@ -173,7 +173,7 @@ def extractValues(context, result, py_metric_id_array, mtypes):
                     # TODO - find way to just look for one name not generate list then find it in list
                     for k in xrange(status):
                         if ivals[k] == res.vset[i].vlist[j].inst:
-                            tmp_names.append(inames[i])             
+                            tmp_names.append(inames[k])             
 
                 if res.vset[i].numval == status:
                     data.append(extractValuesInnerLoop(status, res, dtype, i))

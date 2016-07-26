@@ -2,10 +2,91 @@ from pcp import pmapi
 from libc.stdlib cimport malloc, free
 import cpmapi as c_pmapi
 import numpy
+import ctypes
 from ctypes import c_uint
 from ctypes import addressof
+
 cimport pcp
-    
+
+cdef extern from "Python.h":
+    ctypedef struct Py_buffer:
+        void* buf # Not sure if that's actual implementaion
+    int PyBUF_SIMPLE
+    int PyObject_GetBuffer(object, Py_buffer*, int)  
+
+cdef extern from "inttypes.h":
+    ctypedef intptr_t
+
+cdef object topyobj(pcp.pmAtomValue atom, int dtype):
+    if dtype == pcp.PM_TYPE_STRING:
+        return str(atom.cp)
+    elif dtype == pcp.PM_TYPE_32:
+        return long(atom.l)
+    elif dtype == pcp.PM_TYPE_U32:
+        return long(atom.ul)
+    elif dtype == pcp.PM_TYPE_64:
+        return long(atom.ll)
+    elif dtype == pcp.PM_TYPE_U64:
+        return long(atom.ull)
+    else: # Don't know how to handle data type
+        return long(atom.cp)
+
+def extractpreprocValues(context, result, py_metric_id_array, mtypes):
+    data = []
+    description = []
+   
+    cdef Py_buffer buf
+    PyObject_GetBuffer(result.contents, &buf, PyBUF_SIMPLE)
+    cdef pcp.pmResult* res = <pcp.pmResult*> buf.buf
+    cdef int mid_len = len(py_metric_id_array)
+    cdef pcp.pmID* metric_id_array = <pcp.pmID*>malloc(mid_len * sizeof(pcp.pmID))
+    cdef Py_ssize_t i, j, k
+    cdef int ctx = context._ctx
+    cdef int status, inst
+    cdef int* ivals
+    cdef char** inames
+    cdef pcp.pmDesc metric_desc
+    cdef pcp.pmAtomValue atom
+    cdef int dtype
+    for i in xrange(mid_len):
+        metric_id_array[i] = py_metric_id_array[i] # Implicit py object to c data type conversion
+    pcp.pmUseContext(ctx)
+      
+    for i in xrange(mid_len):
+        pcp.pmLookupDesc(metric_id_array[i], &metric_desc) 
+        if 4294967295 != metric_desc.indom:
+            status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
+            if status < 0: # TODO - add specific responses for different errors
+                description.append({})
+                data.append(numpy.array([]))
+            else:
+                tmp_dict = dict()
+                tmp_data = []
+                dtype = mtypes[i] 
+
+                for j in xrange(status):
+                    tmp_dict[ivals[j]] = inames[j]
+                    if res.vset[i].numval > 0:
+                        inst = res.vset[i].vlist[j].inst 
+                        status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], dtype, &atom, dtype)
+                        if status < 0:
+                            print "Couldn't extract value"
+                            return [], []
+                        tmp_data.append(topyobj(atom, dtype))
+
+                description.append(tmp_dict)
+                data.append(numpy.array(tmp_data))
+                free(ivals)
+                free(inames)
+        else:
+            description.append({})
+            data.append(numpy.array([]))
+
+    free(metric_id_array)
+
+
+    return data, description
+ 
 def getindomdict(context, py_metric_id_array):
     """ build a list of dicts that contain the instance domain id to text mappings
         The nth list entry is the nth metric in the metric_id_array

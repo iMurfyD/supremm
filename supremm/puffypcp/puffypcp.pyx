@@ -49,7 +49,7 @@ cdef object strinnerloop(int numval, pcp.pmResult* res, int i):
        tmp_data.append(str(atom.cp))
     return tmp_data
 
-cdef numpy.ndarray[int32_t, ndim=1, mode="c"] int32innerloop(int numval, pcp.pmResult* res, int i):
+cdef numpy.ndarray[int32_t, ndim=1, mode="c"] int32innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
     cdef Py_ssize_t j
     cdef pcp.pmAtomValue atom
     cdef numpy.ndarray[int32_t, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.int32)
@@ -62,7 +62,7 @@ cdef numpy.ndarray[int32_t, ndim=1, mode="c"] int32innerloop(int numval, pcp.pmR
        tmp_datap[j] = atom.l
     return tmp_data
 
-cdef numpy.ndarray[uint32_t, ndim=1, mode="c"] uint32innerloop(int numval, pcp.pmResult* res, int i):
+cdef numpy.ndarray[uint32_t, ndim=1, mode="c"] uint32innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
     cdef Py_ssize_t j
     cdef pcp.pmAtomValue atom
     cdef numpy.ndarray[uint32_t, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.uint32)
@@ -76,7 +76,7 @@ cdef numpy.ndarray[uint32_t, ndim=1, mode="c"] uint32innerloop(int numval, pcp.p
        tmp_datap[j] = atom.ul
     return tmp_data
 
-cdef numpy.ndarray[int64_t, ndim=1, mode="c"] int64innerloop(int numval, pcp.pmResult* res, int i):
+cdef numpy.ndarray[int64_t, ndim=1, mode="c"] int64innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
     cdef Py_ssize_t j
     cdef pcp.pmAtomValue atom
     cdef numpy.ndarray[int64_t, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.int64)
@@ -90,7 +90,7 @@ cdef numpy.ndarray[int64_t, ndim=1, mode="c"] int64innerloop(int numval, pcp.pmR
        tmp_datap[j] = atom.ll
     return tmp_data
 
-cdef numpy.ndarray[uint64_t, ndim=1, mode="c"] uint64innerloop(int numval, pcp.pmResult* res, int i):
+cdef numpy.ndarray[uint64_t, ndim=1, mode="c"] uint64innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
     cdef Py_ssize_t j
     cdef pcp.pmAtomValue atom
     cdef numpy.ndarray[uint64_t, ndim=1, mode="c"] tmp_data = numpy.empty(numval, numpy.uint64)
@@ -130,19 +130,20 @@ cdef numpy.ndarray[double, ndim=1, mode="c"] doubleinnerloop(int numval, pcp.pmR
        tmp_datap[j] = todouble(atom, pcptype)
     return tmp_data
 
+# Or not?
 # All numeric types become a double I guess
 # If so clean up
 cdef object extractValuesInnerLoop(Py_ssize_t numval, pcp.pmResult* res, int dtype, int i):
     if dtype == pcp.PM_TYPE_STRING:
         return strinnerloop(numval, res, i) 
     elif dtype == pcp.PM_TYPE_32:
-        return doubleinnerloop(numval, res, i, pcp.PM_TYPE_32)
+        return int32innerloop(numval, res, i, pcp.PM_TYPE_32)
     elif dtype == pcp.PM_TYPE_U32:
-        return doubleinnerloop(numval, res, i, pcp.PM_TYPE_U32)
+        return uint32innerloop(numval, res, i, pcp.PM_TYPE_U32)
     elif dtype == pcp.PM_TYPE_64:
-        return doubleinnerloop(numval, res, i, pcp.PM_TYPE_64)
+        return int64innerloop(numval, res, i, pcp.PM_TYPE_64)
     elif dtype == pcp.PM_TYPE_U64:
-        return doubleinnerloop(numval, res, i, pcp.PM_TYPE_U64)
+        return uint64innerloop(numval, res, i, pcp.PM_TYPE_U64)
     elif dtype == pcp.PM_TYPE_DOUBLE:
         return doubleinnerloop(numval, res, i, pcp.PM_TYPE_DOUBLE)
     else: # Don't know how to handle data type
@@ -157,7 +158,6 @@ def extractValues(context, result, py_metric_id_array, mtypes):
     PyObject_GetBuffer(result.contents, &buf, PyBUF_SIMPLE)
     cdef pcp.pmResult* res = <pcp.pmResult*> buf.buf
     cdef int mid_len = len(py_metric_id_array)
-    cdef pcp.pmID* metric_id_array = <pcp.pmID*>malloc(mid_len * sizeof(pcp.pmID))
     cdef Py_ssize_t i, j, k
     cdef int ctx = context._ctx
     cdef int status, inst
@@ -166,17 +166,24 @@ def extractValues(context, result, py_metric_id_array, mtypes):
     cdef pcp.pmDesc metric_desc
     cdef pcp.pmAtomValue atom
     cdef int dtype
+
+    if mid_len < 0:
+        return None, None
+
+    cdef pcp.pmID* metric_id_array = <pcp.pmID*>malloc(mid_len * sizeof(pcp.pmID))
     for i in xrange(mid_len):
         metric_id_array[i] = py_metric_id_array[i] # Implicit py object to c data type conversion
     pcp.pmUseContext(ctx)
-      
+
     for i in xrange(mid_len):
-        pcp.pmLookupDesc(metric_id_array[i], &metric_desc) 
+        status = pcp.pmLookupDesc(metric_id_array[i], &metric_desc) 
+        if status < 0:
+            return None, None
         if 4294967295 != metric_desc.indom:
             status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
             if status < 0: # TODO - add specific responses for different errors
-                description.append([])
-                data.append(numpy.array([]))
+                free(metric_id_array) 
+                return None, None
             else:
                 tmp_names = []
                 tmp_idx = numpy.empty(status, dtype=long)
@@ -190,9 +197,8 @@ def extractValues(context, result, py_metric_id_array, mtypes):
                         for k in xrange(status):
                             if ivals[k] == res.vset[i].vlist[j].inst:
                                 tmp_names.append(inames[k])             
+                    description.append([tmp_idx, tmp_names])
 
-
-                description.append([tmp_idx, tmp_names])
                 free(ivals)
                 free(inames)
         else:
@@ -211,7 +217,6 @@ def extractpreprocValues(context, result, py_metric_id_array, mtypes):
     PyObject_GetBuffer(result.contents, &buf, PyBUF_SIMPLE)
     cdef pcp.pmResult* res = <pcp.pmResult*> buf.buf
     cdef int mid_len = len(py_metric_id_array)
-    cdef pcp.pmID* metric_id_array = <pcp.pmID*>malloc(mid_len * sizeof(pcp.pmID))
     cdef Py_ssize_t i, j
     cdef int ctx = context._ctx
     cdef int status, inst
@@ -220,6 +225,11 @@ def extractpreprocValues(context, result, py_metric_id_array, mtypes):
     cdef pcp.pmDesc metric_desc
     cdef pcp.pmAtomValue atom
     cdef int dtype
+
+    if mid_len < 0:
+        return None, None
+
+    cdef pcp.pmID* metric_id_array = <pcp.pmID*>malloc(mid_len * sizeof(pcp.pmID))
     for i in xrange(mid_len):
         metric_id_array[i] = py_metric_id_array[i] # Implicit py object to c data type conversion
     pcp.pmUseContext(ctx)
@@ -229,8 +239,8 @@ def extractpreprocValues(context, result, py_metric_id_array, mtypes):
         if 4294967295 != metric_desc.indom:
             status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
             if status < 0: # TODO - add specific responses for different errors
-                description.append({})
-                data.append(numpy.array([]))
+                free(metric_id_array)
+                return None, None
             else:
                 tmp_dict = dict()
                 tmp_data = []

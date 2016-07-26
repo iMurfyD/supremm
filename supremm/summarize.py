@@ -133,7 +133,10 @@ class Summarize(object):
         """ get the data and call the analytic """
 
         data, description = puffypcp.extractValues(ctx, result, metric_id_array, mtypes)
-       
+      
+        if data == None and description == None:
+            return False
+ 
         try:
             retval = analytic.process(mdata, float(result.contents.timestamp), data, description)
             return retval
@@ -145,18 +148,11 @@ class Summarize(object):
     def runpreproccall(self, preproc, result, mtypes, ctx, mdata, metric_id_array):
         """ Call the pre-processor data processing function """
 
-        #description = puffypcp.getindomdict(ctx, metric_id_array)
-        #if description == None:
-        #    return True
-        #
-        #data = []
-        #pcpFastExtractValues = pcpfast.pcpfastExtractValues # Cached copy of external c function
-        #for i in xrange(result.contents.numpmid):
-        #    data.append(numpy.array([pcpFastExtractValues(result, i, j, mtypes[i])
-        #                             for j in xrange(result.contents.get_numval(i))]))
-
         data, description = puffypcp.extractpreprocValues(ctx, result, metric_id_array, mtypes)
 
+        if data == None and description == None:
+            return False
+ 
         return preproc.process(float(result.contents.timestamp), data, description)
     
     def processforpreproc(self, ctx, mdata, preproc):

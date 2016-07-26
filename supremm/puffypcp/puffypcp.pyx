@@ -104,33 +104,47 @@ cdef numpy.ndarray[uint64_t, ndim=1, mode="c"] uint64innerloop(int numval, pcp.p
        tmp_datap[j] = atom.ull
     return tmp_data
 
-cdef numpy.ndarray[double, ndim=1, mode="c"] doubleinnerloop(int numval, pcp.pmResult* res, int i):
+cdef double todouble(pcp.pmAtomValue a, int dtype):
+    if dtype == pcp.PM_TYPE_32:
+        return <double>a.l
+    elif dtype == pcp.PM_TYPE_U32:
+        return <double>a.ul
+    elif dtype == pcp.PM_TYPE_64:
+        return <double>a.ll
+    elif dtype == pcp.PM_TYPE_U64:
+        return <double>a.ull
+    else: # dtype == pcp.PM_TYPE_DOUBLE:
+        return a.d
+
+cdef numpy.ndarray[double, ndim=1, mode="c"] doubleinnerloop(int numval, pcp.pmResult* res, int i, int pcptype):
     cdef Py_ssize_t j
     cdef pcp.pmAtomValue atom
     cdef numpy.ndarray[double, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.double)
     cdef double* tmp_datap = &tmp_data[0]
     for j in xrange(status):
        inst = res.vset[i].vlist[j].inst 
-       status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_DOUBLE, &atom, pcp.PM_TYPE_DOUBLE)
+       status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcptype, &atom, pcptype)
        if status < 0:
            print "Couldn't extract value"
            return numpy.empty(0, dtype=numpy.double)
-       tmp_datap[j] = atom.d
+       tmp_datap[j] = todouble(atom, pcptype)
     return tmp_data
 
+# All numeric types become a double I guess
+# If so clean up
 cdef object extractValuesInnerLoop(Py_ssize_t numval, pcp.pmResult* res, int dtype, int i):
     if dtype == pcp.PM_TYPE_STRING:
         return strinnerloop(numval, res, i) 
     elif dtype == pcp.PM_TYPE_32:
-        return int32innerloop(numval, res, i)
+        return doubleinnerloop(numval, res, i, pcp.PM_TYPE_32)
     elif dtype == pcp.PM_TYPE_U32:
-        return uint32innerloop(numval, res, i)
+        return doubleinnerloop(numval, res, i, pcp.PM_TYPE_U32)
     elif dtype == pcp.PM_TYPE_64:
-        return int64innerloop(numval, res, i)
+        return doubleinnerloop(numval, res, i, pcp.PM_TYPE_64)
     elif dtype == pcp.PM_TYPE_U64:
-        return uint64innerloop(numval, res, i)
+        return doubleinnerloop(numval, res, i, pcp.PM_TYPE_U64)
     elif dtype == pcp.PM_TYPE_DOUBLE:
-        return doubleinnerloop(numval, res, i)
+        return doubleinnerloop(numval, res, i, pcp.PM_TYPE_DOUBLE)
     else: # Don't know how to handle data type
         print "Don't know how to handle data type"
         return []
@@ -168,15 +182,15 @@ def extractValues(context, result, py_metric_id_array, mtypes):
                 tmp_idx = numpy.empty(status, dtype=long)
                 dtype = mtypes[i] 
                 
-                for j in xrange(status):
-                    tmp_idx[j] = res.vset[i].vlist[j].inst
-                    # TODO - find way to just look for one name not generate list then find it in list
-                    for k in xrange(status):
-                        if ivals[k] == res.vset[i].vlist[j].inst:
-                            tmp_names.append(inames[k])             
-
                 if res.vset[i].numval == status:
                     data.append(extractValuesInnerLoop(status, res, dtype, i))
+                    for j in xrange(status):
+                        tmp_idx[j] = res.vset[i].vlist[j].inst
+                        # TODO - find way to just look for one name not generate list then find it in list
+                        for k in xrange(status):
+                            if ivals[k] == res.vset[i].vlist[j].inst:
+                                tmp_names.append(inames[k])             
+
 
                 description.append([tmp_idx, tmp_names])
                 free(ivals)

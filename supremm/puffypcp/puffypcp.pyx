@@ -86,14 +86,14 @@ cdef numpy.ndarray[int64_t, ndim=1, mode="c"] int64innerloop(int numval, pcp.pmR
     cdef pcp.pmAtomValue atom
     cdef int status
     cdef numpy.ndarray[int64_t, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.int64)
-    cdef int64_t* tmp_datap = &tmp_data[0]
+    tmp_data = tmp_data
     for j in xrange(numval):
         inst = res.vset[i].vlist[j].inst 
         status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_64, &atom, pcp.PM_TYPE_64)
         if status < 0:
             print "Couldn't extract value"
             return numpy.empty(0, dtype=numpy.int64)
-        tmp_datap[j] = atom.ll
+        tmp_data[j] = atom.ll
     return tmp_data
 
 cdef object uint64innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
@@ -116,7 +116,7 @@ cdef numpy.ndarray[double, ndim=1, mode="c"] doubleinnerloop(int numval, pcp.pmR
     cdef int status
     cdef numpy.ndarray[double, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.double)
     cdef double* tmp_datap = &tmp_data[0]
-    for j in xrange(status):
+    for j in xrange(numval):
        inst = res.vset[i].vlist[j].inst 
        status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcptype, &atom, pcptype)
        if status < 0:
@@ -192,9 +192,10 @@ def extractValues(context, result, py_metric_id_array, mtypes):
         tmp_names = []
         tmp_idx = numpy.empty(ninstances, dtype=long)
 
+        print "about to extract values {} {} {}".format(ninstances, dtype, i)
         # extractValueInneLoop does own looping 
         data.append(extractValuesInnerLoop(ninstances, res, dtype, i))
-        print data[-1]
+        print extractValuesInnerLoop(ninstances, res, dtype, i)        
 
         status = pcp.pmLookupDesc(metric_id_array[i], &metric_desc) 
         if status < 0:
@@ -204,8 +205,6 @@ def extractValues(context, result, py_metric_id_array, mtypes):
         status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
         if status < 0:
             print "pmgetInDom failed"
-            free(metric_id_array)
-            return None, None
         else: 
             for j in xrange(ninstances):
                 tmp_idx[j] = res.vset[i].vlist[j].inst

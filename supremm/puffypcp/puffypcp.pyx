@@ -191,7 +191,7 @@ def extractValues(context, result, py_metric_id_array, mtypes):
         tmp_idx = numpy.empty(ninstances, dtype=long)
 
         # extractValueInneLoop deos own looping 
-        data.append(extractValuesInnerLoop(status, res, dtype, i))
+        data.append(extractValuesInnerLoop(ninstances, res, dtype, i))
         for j in xrange(ninstances):
             tmp_idx[j] = res.vset[i].vlist[j].inst
             # TODO - find way to just look for one name not generate list then find it in list

@@ -145,6 +145,14 @@ cdef object extractValuesInnerLoop(Py_ssize_t numval, pcp.pmResult* res, int dty
         print "Don't know how to handle data type"
         return []
 
+cdef lookup(int val, int len, int* instlist, char** namelist):
+    cdef int i
+    for i in xrange(len):
+        if instlist[i] == val:
+            return namelist[i]
+    print "Couldn't find value"
+    
+
 def extractValues(context, result, py_metric_id_array, mtypes):
     data = []
     description = []
@@ -171,18 +179,12 @@ def extractValues(context, result, py_metric_id_array, mtypes):
         metric_id_array[i] = py_metric_id_array[i] # Implicit py object to c data type conversion
     pcp.pmUseContext(ctx)
 
+    print "numpmid: {}".format(numpmid)
     for i in xrange(numpmid):
         ninstances = res.vset[i].numval
+        print "ninstances {}".format(ninstances)
         if ninstances < 0:
-            free(metric_id_array)
-            return None, None
-
-        status = pcp.pmLookupDesc(metric_id_array[i], &metric_desc) 
-        if status < 0:
-            free(metric_id_array)
-            return None, None
-        status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
-        if status < 0:
+            print "neg ninst"
             free(metric_id_array)
             return None, None
 
@@ -190,19 +192,31 @@ def extractValues(context, result, py_metric_id_array, mtypes):
         tmp_names = []
         tmp_idx = numpy.empty(ninstances, dtype=long)
 
-        # extractValueInneLoop deos own looping 
+        # extractValueInneLoop does own looping 
         data.append(extractValuesInnerLoop(ninstances, res, dtype, i))
-        for j in xrange(ninstances):
-            tmp_idx[j] = res.vset[i].vlist[j].inst
-            # TODO - find way to just look for one name not generate list then find it in list
-            for k in xrange(status):
-                if ivals[k] == res.vset[i].vlist[j].inst:
-                    tmp_names.append(inames[k])             
-            
-        description.append([tmp_idx, tmp_names])
-        
-        free(ivals)
-        free(inames)
+        print data[-1]
+
+        status = pcp.pmLookupDesc(metric_id_array[i], &metric_desc) 
+        if status < 0:
+            print "pmLookupDesc failed"
+            free(metric_id_array)
+            return None, None
+        status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
+        if status < 0:
+            print "pmgetInDom failed"
+            free(metric_id_array)
+            return None, None
+        else: 
+            for j in xrange(ninstances):
+                tmp_idx[j] = res.vset[i].vlist[j].inst
+                # TODO - find way to just look for one name not generate list then find it in list
+                tmp_names.append(lookup(res.vset[i].vlist[j].inst, status, ivals, inames))   
+                    
+            description.append([tmp_idx, tmp_names])
+            print description[-1]       
+ 
+            free(ivals)
+            free(inames)
 
     free(metric_id_array)
     if len(data) == 0:

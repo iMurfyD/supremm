@@ -173,13 +173,16 @@ def extractValues(context, result, py_metric_id_array, mtypes):
     cdef pcp.pmID* metric_id_array = <pcp.pmID*>malloc(mid_len * sizeof(pcp.pmID))
     for i in xrange(mid_len):
         metric_id_array[i] = py_metric_id_array[i] # Implicit py object to c data type conversion
+        print metric_id_array[i]
     pcp.pmUseContext(ctx)
 
     for i in xrange(mid_len):
         status = pcp.pmLookupDesc(metric_id_array[i], &metric_desc) 
+        print status
         if status < 0:
             return None, None
         status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
+        print status
         if status < 0: # TODO - add specific responses for different errors
             free(metric_id_array) 
             return None, None
@@ -187,15 +190,22 @@ def extractValues(context, result, py_metric_id_array, mtypes):
             tmp_names = []
             tmp_idx = numpy.empty(status, dtype=long)
             dtype = mtypes[i] 
-            
+            print i
+            print j
+            print dtype 
             if res.vset[i].numval == status:
-                data.append(extractValuesInnerLoop(status, res, dtype, i))
+                print "about to extract inner loop"
+                innloop = extractValuesInnerLoop(status, res, dtype, i)
+                print innloop
+                data.append(innloop)
                 for j in xrange(status):
                     tmp_idx[j] = res.vset[i].vlist[j].inst
                     # TODO - find way to just look for one name not generate list then find it in list
                     for k in xrange(status):
                         if ivals[k] == res.vset[i].vlist[j].inst:
                             tmp_names.append(inames[k])             
+                print "appending to description"
+                print [tmp_idx, tmp_names]
                 description.append([tmp_idx, tmp_names])
 
             free(ivals)

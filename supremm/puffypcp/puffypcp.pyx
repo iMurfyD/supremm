@@ -12,6 +12,11 @@ cdef extern from "Python.h":
         void* buf # Not sure if that's actual implementaion
     int PyBUF_SIMPLE
     int PyObject_GetBuffer(object, Py_buffer*, int)  
+    ctypedef void PyObject
+    PyObject* PyLong_FromLong(long)
+    PyObject* PyLong_FromUnsignedLong(unsigned long)
+    PyObject* PyLong_FromLongLong(long long)
+    PyObject* PyLong_FromUnsignedLongLong(unsigned long long)
 
 # Just so it will compile - not sure if these are the acutal definitions
 cdef extern from "inttypes.h":
@@ -42,39 +47,41 @@ cdef object strinnerloop(int numval, pcp.pmResult* res, int i):
     cdef pcp.pmAtomValue atom
     tmp_data = list()
     for j in xrange(status):
-       status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_STRING, &atom, pcp.PM_TYPE_STRING)
-       if status < 0:
-           print "Couldn't extract value"
-           return []
-       tmp_data.append(str(atom.cp))
-    return tmp_data
+        status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_STRING, &atom, pcp.PM_TYPE_STRING)
+        if status < 0:
+            print "Couldn't extract value"
+            return []
+        tmp_data.append(str(atom.cp))
+    return numpy.array(tmp_data)
 
-cdef numpy.ndarray[int32_t, ndim=1, mode="c"] int32innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
+cdef object int32innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
     cdef Py_ssize_t j
     cdef pcp.pmAtomValue atom
-    cdef numpy.ndarray[int32_t, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.int32)
-    cdef int32_t* tmp_datap = &tmp_data[0]
+    cdef tmp_data = list()
     for j in xrange(status):
-       status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_32, &atom, pcp.PM_TYPE_32)
-       if status < 0:
-           print "Couldn't extract value"
-           return numpy.empty(0, dtype=numpy.int32)
-       tmp_datap[j] = atom.l
-    return tmp_data
+        status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_32, &atom, pcp.PM_TYPE_32)
+        if status < 0:
+            print "Couldn't extract value"
+            return numpy.empty(0)
+        tmp_data.append(atom.l)
+    return numpy.array(tmp_data)
 
-cdef numpy.ndarray[uint32_t, ndim=1, mode="c"] uint32innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
+cdef object uint32innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
+    print "inner loop time"
     cdef Py_ssize_t j
     cdef pcp.pmAtomValue atom
-    cdef numpy.ndarray[uint32_t, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.uint32)
-    cdef uint32_t* tmp_datap = &tmp_data[0]
+    tmp_data = list()
     for j in xrange(status):
-       inst = res.vset[i].vlist[j].inst 
-       status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_U32, &atom, pcp.PM_TYPE_U32)
-       if status < 0:
-           print "Couldn't extract value"
-           return numpy.empty(0, dtype=numpy.uint32)
-       tmp_datap[j] = atom.ul
-    return tmp_data
+        inst = res.vset[i].vlist[j].inst 
+        status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_U32, &atom, pcp.PM_TYPE_U32)
+        print inst
+        print status
+        if status < 0:
+            print "Couldn't extract value"
+            return numpy.empty(0, dtype=numpy.uint32)
+        print atom.ul
+        tmp_data.append(atom.ul)
+    return numpy.array(tmp_data)
 
 cdef numpy.ndarray[int64_t, ndim=1, mode="c"] int64innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
     cdef Py_ssize_t j
@@ -82,27 +89,26 @@ cdef numpy.ndarray[int64_t, ndim=1, mode="c"] int64innerloop(int numval, pcp.pmR
     cdef numpy.ndarray[int64_t, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.int64)
     cdef int64_t* tmp_datap = &tmp_data[0]
     for j in xrange(status):
-       inst = res.vset[i].vlist[j].inst 
-       status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_64, &atom, pcp.PM_TYPE_64)
-       if status < 0:
-           print "Couldn't extract value"
-           return numpy.empty(0, dtype=numpy.int64)
-       tmp_datap[j] = atom.ll
+        inst = res.vset[i].vlist[j].inst 
+        status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_64, &atom, pcp.PM_TYPE_64)
+        if status < 0:
+            print "Couldn't extract value"
+            return numpy.empty(0, dtype=numpy.int64)
+        tmp_datap[j] = atom.ll
     return tmp_data
 
-cdef numpy.ndarray[uint64_t, ndim=1, mode="c"] uint64innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
+cdef object uint64innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
     cdef Py_ssize_t j
     cdef pcp.pmAtomValue atom
-    cdef numpy.ndarray[uint64_t, ndim=1, mode="c"] tmp_data = numpy.empty(numval, numpy.uint64)
-    cdef uint64_t* tmp_datap = &tmp_data[0]
+    tmp_data = []
     for j in xrange(status):
-       inst = res.vset[i].vlist[j].inst 
-       status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_U64, &atom, pcp.PM_TYPE_U64)
-       if status < 0:
-           print "Couldn't extract value"
-           return numpy.empty(0, dtype=numpy.uint64)
-       tmp_datap[j] = atom.ull
-    return tmp_data
+        inst = res.vset[i].vlist[j].inst 
+        status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_U64, &atom, pcp.PM_TYPE_U64)
+        if status < 0:
+            print "Couldn't extract value"
+            return numpy.empty(0, dtype=numpy.uint64)
+        tmp_data.append(atom.ull)
+    return numpy.array(tmp_data)
 
 cdef double todouble(pcp.pmAtomValue a, int dtype):
     if dtype == pcp.PM_TYPE_32:

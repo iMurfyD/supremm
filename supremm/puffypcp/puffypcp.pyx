@@ -171,6 +171,7 @@ def extractValues(context, result, py_metric_id_array, mtypes):
         return None, None
 
     cdef pcp.pmID* metric_id_array = <pcp.pmID*>malloc(mid_len * sizeof(pcp.pmID))
+    print "mid array"
     for i in xrange(mid_len):
         metric_id_array[i] = py_metric_id_array[i] # Implicit py object to c data type conversion
         print metric_id_array[i]
@@ -178,11 +179,11 @@ def extractValues(context, result, py_metric_id_array, mtypes):
 
     for i in xrange(mid_len):
         status = pcp.pmLookupDesc(metric_id_array[i], &metric_desc) 
+        print "i: {}".format(i)
         print status
         if status < 0:
             return None, None
         status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
-        print status
         if status < 0: # TODO - add specific responses for different errors
             free(metric_id_array) 
             return None, None
@@ -190,15 +191,14 @@ def extractValues(context, result, py_metric_id_array, mtypes):
             tmp_names = []
             tmp_idx = numpy.empty(status, dtype=long)
             dtype = mtypes[i] 
-            print i
-            print j
-            print dtype 
+            print "dtype: {}".format(dtype)
             if res.vset[i].numval == status:
                 print "about to extract inner loop"
                 innloop = extractValuesInnerLoop(status, res, dtype, i)
                 print innloop
                 data.append(innloop)
                 for j in xrange(status):
+                    print "j: {}".format(j)
                     tmp_idx[j] = res.vset[i].vlist[j].inst
                     # TODO - find way to just look for one name not generate list then find it in list
                     for k in xrange(status):

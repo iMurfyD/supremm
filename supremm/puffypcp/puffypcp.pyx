@@ -45,8 +45,9 @@ cdef object topyobj(pcp.pmAtomValue atom, int dtype):
 cdef object strinnerloop(int numval, pcp.pmResult* res, int i):
     cdef Py_ssize_t j
     cdef pcp.pmAtomValue atom
+    cdef int status
     tmp_data = list()
-    for j in xrange(status):
+    for j in xrange(numval):
         status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_STRING, &atom, pcp.PM_TYPE_STRING)
         if status < 0:
             print "Couldn't extract value"
@@ -57,8 +58,9 @@ cdef object strinnerloop(int numval, pcp.pmResult* res, int i):
 cdef object int32innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
     cdef Py_ssize_t j
     cdef pcp.pmAtomValue atom
+    cdef int status
     cdef tmp_data = list()
-    for j in xrange(status):
+    for j in xrange(numval):
         status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_32, &atom, pcp.PM_TYPE_32)
         if status < 0:
             print "Couldn't extract value"
@@ -69,9 +71,12 @@ cdef object int32innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
 cdef object uint32innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
     print "inner loop time"
     cdef Py_ssize_t j
+    cdef int status
     cdef pcp.pmAtomValue atom
     tmp_data = list()
-    for j in xrange(status):
+    print "about to start loop"
+    for j in xrange(numval):
+        print j
         inst = res.vset[i].vlist[j].inst 
         status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_U32, &atom, pcp.PM_TYPE_U32)
         print inst
@@ -86,9 +91,10 @@ cdef object uint32innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
 cdef numpy.ndarray[int64_t, ndim=1, mode="c"] int64innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
     cdef Py_ssize_t j
     cdef pcp.pmAtomValue atom
+    cdef int status
     cdef numpy.ndarray[int64_t, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.int64)
     cdef int64_t* tmp_datap = &tmp_data[0]
-    for j in xrange(status):
+    for j in xrange(numval):
         inst = res.vset[i].vlist[j].inst 
         status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_64, &atom, pcp.PM_TYPE_64)
         if status < 0:
@@ -100,8 +106,9 @@ cdef numpy.ndarray[int64_t, ndim=1, mode="c"] int64innerloop(int numval, pcp.pmR
 cdef object uint64innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
     cdef Py_ssize_t j
     cdef pcp.pmAtomValue atom
+    cdef int status
     tmp_data = []
-    for j in xrange(status):
+    for j in xrange(numval):
         inst = res.vset[i].vlist[j].inst 
         status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_U64, &atom, pcp.PM_TYPE_U64)
         if status < 0:
@@ -125,6 +132,7 @@ cdef double todouble(pcp.pmAtomValue a, int dtype):
 cdef numpy.ndarray[double, ndim=1, mode="c"] doubleinnerloop(int numval, pcp.pmResult* res, int i, int pcptype):
     cdef Py_ssize_t j
     cdef pcp.pmAtomValue atom
+    cdef int status
     cdef numpy.ndarray[double, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.double)
     cdef double* tmp_datap = &tmp_data[0]
     for j in xrange(status):

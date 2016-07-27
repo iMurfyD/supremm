@@ -110,18 +110,6 @@ cdef object uint64innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
         tmp_data.append(atom.ull)
     return numpy.array(tmp_data)
 
-cdef double todouble(pcp.pmAtomValue a, int dtype):
-    if dtype == pcp.PM_TYPE_32:
-        return <double>a.l
-    elif dtype == pcp.PM_TYPE_U32:
-        return <double>a.ul
-    elif dtype == pcp.PM_TYPE_64:
-        return <double>a.ll
-    elif dtype == pcp.PM_TYPE_U64:
-        return <double>a.ull
-    else: # dtype == pcp.PM_TYPE_DOUBLE:
-        return a.d
-
 cdef numpy.ndarray[double, ndim=1, mode="c"] doubleinnerloop(int numval, pcp.pmResult* res, int i, int pcptype):
     cdef Py_ssize_t j
     cdef pcp.pmAtomValue atom
@@ -134,7 +122,7 @@ cdef numpy.ndarray[double, ndim=1, mode="c"] doubleinnerloop(int numval, pcp.pmR
        if status < 0:
            print "Couldn't extract value"
            return numpy.empty(0, dtype=numpy.double)
-       tmp_datap[j] = todouble(atom, pcptype)
+       tmp_datap[j] = atom.d
     return tmp_data
 
 # Or not?

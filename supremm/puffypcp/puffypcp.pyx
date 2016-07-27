@@ -152,7 +152,8 @@ def extractValues(context, result, py_metric_id_array, mtypes):
     cdef Py_buffer buf
     PyObject_GetBuffer(result.contents, &buf, PyBUF_SIMPLE)
     cdef pcp.pmResult* res = <pcp.pmResult*> buf.buf
-    cdef int mid_len = len(py_metric_id_array)
+    cdef int numpmid = res.numpmid
+    cdef int ninstances
     cdef Py_ssize_t i, j, k
     cdef int ctx = context._ctx
     cdef int status, inst
@@ -162,44 +163,51 @@ def extractValues(context, result, py_metric_id_array, mtypes):
     cdef pcp.pmAtomValue atom
     cdef int dtype
 
-    if mid_len < 0:
+    if numpmid < 0:
         return None, None
 
-    cdef pcp.pmID* metric_id_array = <pcp.pmID*>malloc(mid_len * sizeof(pcp.pmID))
-    for i in xrange(mid_len):
+    cdef pcp.pmID* metric_id_array = <pcp.pmID*>malloc(numpmid * sizeof(pcp.pmID))
+    for i in xrange(numpmid):
         metric_id_array[i] = py_metric_id_array[i] # Implicit py object to c data type conversion
     pcp.pmUseContext(ctx)
 
-    for i in xrange(mid_len):
+    for i in xrange(numpmid):
+        ninstances = res.vset[i].numval
+        if ninstances < 0:
+            free(metric_id_array)
+            return None, None
+
         status = pcp.pmLookupDesc(metric_id_array[i], &metric_desc) 
         if status < 0:
+            free(metric_id_array)
             return None, None
         status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
-        if status < 0: # TODO - add specific responses for different errors
-            free(metric_id_array) 
+        if status < 0:
+            free(metric_id_array)
             return None, None
-        else:
-            tmp_names = []
-            tmp_idx = numpy.empty(status, dtype=long)
-            dtype = mtypes[i] 
-            if res.vset[i].numval == status:
-                innloop = extractValuesInnerLoop(status, res, dtype, i)
-                data.append(innloop)
-                for j in xrange(status):
-                    tmp_idx[j] = res.vset[i].vlist[j].inst
-                    # TODO - find way to just look for one name not generate list then find it in list
-                    for k in xrange(status):
-                        if ivals[k] == res.vset[i].vlist[j].inst:
-                            tmp_names.append(inames[k])             
-                description.append([tmp_idx, tmp_names])
 
-            free(ivals)
-            free(inames)
+        dtype = mtypes[i]       
+        tmp_names = []
+        tmp_idx = numpy.empty(ninstances, dtype=long)
+
+        # extractValueInneLoop deos own looping 
+        data.append(extractValuesInnerLoop(status, res, dtype, i))
+        for j in xrange(ninstances):
+            tmp_idx[j] = res.vset[i].vlist[j].inst
+            # TODO - find way to just look for one name not generate list then find it in list
+            for k in xrange(status):
+                if ivals[k] == res.vset[i].vlist[j].inst:
+                    tmp_names.append(inames[k])             
+            
+        description.append([tmp_idx, tmp_names])
+        
+        free(ivals)
+        free(inames)
 
     free(metric_id_array)
-
     if len(data) == 0:
         return None, None # Couldn't find anything
+
 
     return data, description
 

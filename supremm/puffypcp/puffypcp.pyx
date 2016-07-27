@@ -179,12 +179,9 @@ def extractValues(context, result, py_metric_id_array, mtypes):
         metric_id_array[i] = py_metric_id_array[i] # Implicit py object to c data type conversion
     pcp.pmUseContext(ctx)
 
-    print "numpmid: {}".format(numpmid)
     for i in xrange(numpmid):
         ninstances = res.vset[i].numval
-        print "ninstances {}".format(ninstances)
         if ninstances < 0:
-            print "neg ninst"
             free(metric_id_array)
             return None, None
 
@@ -192,19 +189,17 @@ def extractValues(context, result, py_metric_id_array, mtypes):
         tmp_names = []
         tmp_idx = numpy.empty(ninstances, dtype=long)
 
-        print "about to extract values {} {} {}".format(ninstances, dtype, i)
         # extractValueInneLoop does own looping 
         data.append(extractValuesInnerLoop(ninstances, res, dtype, i))
-        print extractValuesInnerLoop(ninstances, res, dtype, i)        
 
         status = pcp.pmLookupDesc(metric_id_array[i], &metric_desc) 
         if status < 0:
-            print "pmLookupDesc failed"
             free(metric_id_array)
             return None, None
         status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
         if status < 0:
-            print "pmgetInDom failed"
+            # Couldn't get indom
+            pass
         else: 
             for j in xrange(ninstances):
                 tmp_idx[j] = res.vset[i].vlist[j].inst
@@ -212,7 +207,6 @@ def extractValues(context, result, py_metric_id_array, mtypes):
                 tmp_names.append(lookup(res.vset[i].vlist[j].inst, status, ivals, inames))   
                     
             description.append([tmp_idx, tmp_names])
-            print description[-1]       
  
             free(ivals)
             free(inames)

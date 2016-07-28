@@ -40,6 +40,7 @@ cdef object topyobj(pcp.pmAtomValue atom, int dtype):
     elif dtype == pcp.PM_TYPE_DOUBLE:
         return long(atom.d)
     else: # Don't know how to handle data type
+        print "Unknown data type"
         return long(atom.cp)
 
 cdef object strinnerloop(int numval, pcp.pmResult* res, int i):
@@ -55,92 +56,94 @@ cdef object strinnerloop(int numval, pcp.pmResult* res, int i):
         tmp_data.append(str(atom.cp))
     return numpy.array(tmp_data)
 
-cdef object int32innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
+cdef numpy.ndarray[double, ndim=1, mode="c"] int32innerloop(int numval, pcp.pmResult* res, int i):
     cdef Py_ssize_t j
     cdef pcp.pmAtomValue atom
     cdef int status
-    cdef tmp_data = list()
+    cdef numpy.ndarray[double, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.float64)
+    tmp_data = tmp_data # To update cython reference
     for j in xrange(numval):
         status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_32, &atom, pcp.PM_TYPE_32)
         if status < 0:
             print "Couldn't extract value"
-            return numpy.empty(0)
-        tmp_data.append(atom.l)
+            return numpy.empty(0, dtype=numpy.float64)
+        tmp_data[j] = <double>atom.l
     return numpy.array(tmp_data)
 
-cdef object uint32innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
+cdef numpy.ndarray[double, ndim=1, mode="c"] uint32innerloop(int numval, pcp.pmResult* res, int i):
     cdef Py_ssize_t j
     cdef int status
     cdef pcp.pmAtomValue atom
-    tmp_data = list()
+    cdef numpy.ndarray[double, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.float64)
+    tmp_data = tmp_data
     for j in xrange(numval):
         inst = res.vset[i].vlist[j].inst 
         status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_U32, &atom, pcp.PM_TYPE_U32)
         if status < 0:
-            return numpy.empty(0, dtype=numpy.uint32)
-        tmp_data.append(atom.ul)
+            return numpy.empty(0, dtype=numpy.float64)
+        tmp_data[j] = <double>atom.ul
     return numpy.array(tmp_data)
 
-cdef numpy.ndarray[int64_t, ndim=1, mode="c"] int64innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
+cdef numpy.ndarray[double, ndim=1, mode="c"] int64innerloop(int numval, pcp.pmResult* res, int i):
     cdef Py_ssize_t j
     cdef pcp.pmAtomValue atom
     cdef int status
-    cdef numpy.ndarray[int64_t, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.int64)
+    cdef numpy.ndarray[double, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.float64)
     tmp_data = tmp_data
     for j in xrange(numval):
         inst = res.vset[i].vlist[j].inst 
         status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_64, &atom, pcp.PM_TYPE_64)
         if status < 0:
             print "Couldn't extract value"
-            return numpy.empty(0, dtype=numpy.int64)
-        tmp_data[j] = atom.ll
+            return numpy.empty(0, dtype=numpy.float64)
+        tmp_data[j] = <double>atom.ll
     return tmp_data
 
-cdef object uint64innerloop(int numval, pcp.pmResult* res, int i, int pcptype):
+cdef numpy.ndarray[double, ndim=1, mode="c"] uint64innerloop(int numval, pcp.pmResult* res, int i):
     cdef Py_ssize_t j
     cdef pcp.pmAtomValue atom
     cdef int status
-    tmp_data = []
+    cdef numpy.ndarray[double, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.float64)
+    tmp_data = tmp_data
     for j in xrange(numval):
         inst = res.vset[i].vlist[j].inst 
         status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_U64, &atom, pcp.PM_TYPE_U64)
         if status < 0:
             print "Couldn't extract value"
-            return numpy.empty(0, dtype=numpy.uint64)
-        tmp_data.append(atom.ull)
+            return numpy.empty(0, dtype=numpy.float64)
+        tmp_data[j] = <double>atom.ull
     return numpy.array(tmp_data)
 
-cdef numpy.ndarray[double, ndim=1, mode="c"] doubleinnerloop(int numval, pcp.pmResult* res, int i, int pcptype):
+cdef numpy.ndarray[double, ndim=1, mode="c"] doubleinnerloop(int numval, pcp.pmResult* res, int i):
     cdef Py_ssize_t j
     cdef pcp.pmAtomValue atom
     cdef int status
-    cdef numpy.ndarray[double, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.double)
+    cdef numpy.ndarray[double, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.float64)
     cdef double* tmp_datap = &tmp_data[0]
     for j in xrange(numval):
        inst = res.vset[i].vlist[j].inst 
-       status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcptype, &atom, pcptype)
+       status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_DOUBLE, &atom, pcp.PM_TYPE_DOUBLE)
        if status < 0:
            print "Couldn't extract value"
-           return numpy.empty(0, dtype=numpy.double)
+           return numpy.empty(0, dtype=numpy.float64)
        tmp_datap[j] = atom.d
     return tmp_data
 
-# Or not?
-# All numeric types become a double I guess
-# If so clean up
+# All numeric types return numpy.float64 (c double) arrays
+# Functions are seperated based on type to handle any quirks from converting to double
 cdef object extractValuesInnerLoop(Py_ssize_t numval, pcp.pmResult* res, int dtype, int i):
     if dtype == pcp.PM_TYPE_STRING:
         return strinnerloop(numval, res, i) 
     elif dtype == pcp.PM_TYPE_32:
-        return int32innerloop(numval, res, i, pcp.PM_TYPE_32)
+        return int32innerloop(numval, res, i)
     elif dtype == pcp.PM_TYPE_U32:
-        return uint32innerloop(numval, res, i, pcp.PM_TYPE_U32)
+        return uint32innerloop(numval, res, i)
     elif dtype == pcp.PM_TYPE_64:
-        return int64innerloop(numval, res, i, pcp.PM_TYPE_64)
+        return int64innerloop(numval, res, i)
     elif dtype == pcp.PM_TYPE_U64:
-        return uint64innerloop(numval, res, i, pcp.PM_TYPE_U64)
+        return uint64innerloop(numval, res, i)
     elif dtype == pcp.PM_TYPE_DOUBLE:
-        return doubleinnerloop(numval, res, i, pcp.PM_TYPE_DOUBLE)
+        return doubleinnerloop(numval, res, i)
     else: # Don't know how to handle data type
         print "Don't know how to handle data type"
         return []

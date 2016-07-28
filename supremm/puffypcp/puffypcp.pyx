@@ -187,32 +187,35 @@ def extractValues(context, result, py_metric_id_array, mtypes):
         if ninstances < 0:
             free(metric_id_array)
             return None, None
+        # No instances, but there needs to be a placeholder description
+        elif ninstances == 0:
+            description.append(numpy.empty(0, dtype=numpy.float64))
+            data.append([])
+        else:
+            dtype = mtypes[i]       
+            tmp_names = []
+            tmp_idx = numpy.empty(ninstances, dtype=long)
 
-        dtype = mtypes[i]       
-        tmp_names = []
-        tmp_idx = numpy.empty(ninstances, dtype=long)
-
-        # extractValueInneLoop does own looping 
-        data.append(extractValuesInnerLoop(ninstances, res, dtype, i))
-
-        status = pcp.pmLookupDesc(metric_id_array[i], &metric_desc) 
-        if status < 0:
-            free(metric_id_array)
-            return None, None
-        status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
-        if status < 0:
-            # Couldn't get indom
-            pass
-        else: 
-            for j in xrange(ninstances):
-                tmp_idx[j] = res.vset[i].vlist[j].inst
-                # TODO - find way to just look for one name not generate list then find it in list
-                tmp_names.append(lookup(res.vset[i].vlist[j].inst, status, ivals, inames))   
-                    
-            description.append([tmp_idx, tmp_names])
+            # extractValueInneLoop does own looping 
+            data.append(extractValuesInnerLoop(ninstances, res, dtype, i))
+            status = pcp.pmLookupDesc(metric_id_array[i], &metric_desc) 
+            if status < 0:
+                free(metric_id_array)
+                return None, None
+            status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
+            if status < 0:
+                free(metric_id_array)
+                return None, None
+            else: 
+                for j in xrange(ninstances):
+                    tmp_idx[j] = res.vset[i].vlist[j].inst
+                    # TODO - find way to just look for one name not generate list then find it in list
+                    tmp_names.append(lookup(res.vset[i].vlist[j].inst, status, ivals, inames))   
+                        
+                description.append([tmp_idx, tmp_names])
  
-            free(ivals)
-            free(inames)
+                free(ivals)
+                free(inames)
 
     free(metric_id_array)
     if len(data) == 0:

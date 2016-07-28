@@ -159,7 +159,7 @@ cdef lookup(int val, int len, int* instlist, char** namelist):
 def extractValues(context, result, py_metric_id_array, mtypes):
     data = []
     description = []
-  
+
     cdef Py_buffer buf
     PyObject_GetBuffer(result.contents, &buf, PyBUF_SIMPLE)
     cdef pcp.pmResult* res = <pcp.pmResult*> buf.buf
@@ -205,8 +205,11 @@ def extractValues(context, result, py_metric_id_array, mtypes):
                 return None, None
             status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
             if status < 0:
-                free(metric_id_array)
-                return None, None
+                if len(data[i]) != 0: # Found data, so insert placeholder description
+                    description.append([numpy.empty(0, dtype=numpy.int64), []])
+                else: 
+                    free(metric_id_array)
+                    return None, None
             else: 
                 for j in xrange(ninstances):
                     tmp_idx[j] = res.vset[i].vlist[j].inst
@@ -219,9 +222,6 @@ def extractValues(context, result, py_metric_id_array, mtypes):
                 free(inames)
 
     free(metric_id_array)
-    if len(data) == 0:
-        return None, None # Couldn't find anything
-
 
     return data, description
 

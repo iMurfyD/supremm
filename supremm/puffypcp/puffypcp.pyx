@@ -188,7 +188,7 @@ def extractValues(context, result, py_metric_id_array, mtypes):
         if ninstances < 0:
             free(metric_id_array)
             return None, None
-        # No instances, but there needs to be a placeholder description
+        # No instances, but there needs to be placeholders
         elif ninstances == 0:
             data.append(numpy.empty(0, dtype=numpy.float64))
             description.append([numpy.empty(0, dtype=numpy.int64), []])

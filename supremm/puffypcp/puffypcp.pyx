@@ -184,13 +184,14 @@ def extractValues(context, result, py_metric_id_array, mtypes):
 
     for i in xrange(numpmid):
         ninstances = res.vset[i].numval
+        ninstances = ninstances
         if ninstances < 0:
             free(metric_id_array)
             return None, None
         # No instances, but there needs to be a placeholder description
         elif ninstances == 0:
-            description.append(numpy.empty(0, dtype=numpy.float64))
-            data.append([])
+            data.append(numpy.empty(0, dtype=numpy.float64))
+            description.append([numpy.empty(0, dtype=numpy.int64), []])
         else:
             dtype = mtypes[i]       
             tmp_names = []

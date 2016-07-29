@@ -148,13 +148,13 @@ cdef object extractValuesInnerLoop(Py_ssize_t numval, pcp.pmResult* res, int dty
         print "Don't know how to handle data type"
         return []
 
-cdef lookup(int val, int len, int* instlist, char** namelist):
+cdef char* lookup(int val, int len, int* instlist, char** namelist):
     cdef int i
     for i in xrange(len):
         if instlist[i] == val:
             return namelist[i]
-    print "Couldn't find value"
-    
+    print "Couldn't find thing"
+    return NULL
 
 def extractValues(context, result, py_metric_id_array, mtypes):
     data = []
@@ -170,6 +170,7 @@ def extractValues(context, result, py_metric_id_array, mtypes):
     cdef int status, inst
     cdef int* ivals
     cdef char** inames
+    cdef char* name
     cdef pcp.pmDesc metric_desc
     cdef pcp.pmAtomValue atom
     cdef int dtype
@@ -195,7 +196,7 @@ def extractValues(context, result, py_metric_id_array, mtypes):
         else:
             dtype = mtypes[i]       
             tmp_names = []
-            tmp_idx = numpy.empty(ninstances, dtype=long)
+            tmp_idx = numpy.empty(ninstances, dtype=int)
 
             # extractValueInneLoop does own looping 
             data.append(extractValuesInnerLoop(ninstances, res, dtype, i))
@@ -210,11 +211,48 @@ def extractValues(context, result, py_metric_id_array, mtypes):
                 else: 
                     free(metric_id_array)
                     return None, None
+            elif ninstances > status: # Missing a few indoms - skip 
+                print "new addition"
+                free(metric_id_array)
+                return True, True
+                #data.append(numpy.empty(0, dtype=numpy.float64))
+                #description.append([numpy.empty(0, dtype=numpy.int64), []])
             else: 
+                if ninstances > status:
+                    print "We're not good brah"
+                    print "i {}/{}, j {}/{}".format(i, numpmid, j, ninstances)
+                    #print "inst: {}".format(res.vset[i].vlist[j].inst)
+                    print "tmp_idx: {}".format(tmp_idx)
+                    print "status: {}".format(status)
+                    print "data: {}".format(data)
+                    print "description: {}".format(description)
+                    #tmp_idx[10000000000000000000000000] = 2 # Beter crash
+                    
                 for j in xrange(ninstances):
+                    if res.vset[i].vlist[j].inst == 4294967295:
+                        print "inst isn't a real thing dudde"
+                        print "i {}/{}, j {}/{}".format(i, numpmid, j, ninstances)
+                        print "inst: {}".format(res.vset[i].vlist[j].inst)
+                        print "tmp_idx: {}".format(tmp_idx)
+                        print "data: {}".format(data)
+                        print "description: {}".format(description)
+                        tmp_idx[10000000000000000000000000] = 2 # Beter crash
                     tmp_idx[j] = res.vset[i].vlist[j].inst
                     # TODO - find way to just look for one name not generate list then find it in list
-                    tmp_names.append(lookup(res.vset[i].vlist[j].inst, status, ivals, inames))   
+                    name = lookup(res.vset[i].vlist[j].inst, status, ivals, inames)          
+                    if name == NULL:
+                        print "returned NULL"
+                        print "i {}/{}, j {}/{}".format(i, numpmid, j, ninstances)
+                        print "status: {}".format(status)
+                        print "inst: {}".format(res.vset[i].vlist[j].inst)
+                        print "tmp_idx: {}".format(tmp_idx)
+                        print "indomdict"
+                        for k in xrange(status):
+                            print "{} / {}".format(ivals[k], inames[k])
+                        print "data: {}".format(data)
+                        print "description: {}".format(description)
+                    #    return True, True # Skip this entry - no indom 
+                    tmp_names.append(name)   
                         
                 description.append([tmp_idx, tmp_names])
  

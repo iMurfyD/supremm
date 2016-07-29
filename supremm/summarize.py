@@ -136,6 +136,9 @@ class Summarize(object):
       
         if data == None and description == None:
             return False
+        elif data == True and description == True:
+            print "skipping ts"
+            return True # Skip this timestep
  
         try:
             retval = analytic.process(mdata, float(result.contents.timestamp), data, description)
@@ -152,7 +155,7 @@ class Summarize(object):
 
         if data == None and description == None:
             return False
- 
+
         return preproc.process(float(result.contents.timestamp), data, description)
     
     def processforpreproc(self, ctx, mdata, preproc):

@@ -36,6 +36,8 @@ class FileOutput(object):
         if not os.path.exists(self._path):
             raise Exception("Path specified by out_file does not exist")
         self._file = open(self._path, 'w')
+        self._jsonfile = open(self._path+'.json', 'w')
+        self._jsonarray = []
 
     def __enter__(self):
         print ("Calling enter on file", file=self._file)
@@ -45,12 +47,17 @@ class FileOutput(object):
         """
         json print
         """
+        
         print(self._resid, json.dumps(summary.get(), indent=4), file=self._file)
+        self._jsonarray.append(summary.get())
+        self._jsonarray.append(mdata)
         print("MDATA: ", json.dumps(mdata, indent=4), file=self._file)
 
     def __exit__(self, exception_type, exception_val, trace):
+        print(json.dumps(self._jsonarray, indent=4), file=self._jsonfile)
         print("Calling exit on {}".format(self._file.name), file=self._file)
         self._file.close()
+        self._jsonfile.close()
 
 class MongoOutput(object):
     """ Support for mongodb output """

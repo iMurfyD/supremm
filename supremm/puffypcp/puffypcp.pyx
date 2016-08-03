@@ -348,7 +348,7 @@ def loadrequiredmetrics(context, requiredMetrics):
     
     cdef pcp.pmID* required = <pcp.pmID*>malloc(num_met * sizeof(pcp.pmID*))
     status = pcp.pmLookupName(num_met, nameofmetrics, required)
-    if status < 0: # Add specificc error messages
+    if status < 0: # Add specific error messages
         free(required)
         return []
         # Required metric missing - this analytic cannot run on this archive

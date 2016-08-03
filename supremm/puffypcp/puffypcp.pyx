@@ -153,7 +153,6 @@ cdef char* lookup(int val, int len, int* instlist, char** namelist):
     for i in xrange(len):
         if instlist[i] == val:
             return namelist[i]
-    print "Couldn't find thing"
     return NULL
 
 def extractValues(context, result, py_metric_id_array, mtypes):
@@ -212,46 +211,21 @@ def extractValues(context, result, py_metric_id_array, mtypes):
                     free(metric_id_array)
                     return None, None
             elif ninstances > status: # Missing a few indoms - skip 
-                print "new addition"
                 free(metric_id_array)
                 return True, True
                 #data.append(numpy.empty(0, dtype=numpy.float64))
                 #description.append([numpy.empty(0, dtype=numpy.int64), []])
             else: 
                 if ninstances > status:
-                    print "We're not good brah"
-                    print "i {}/{}, j {}/{}".format(i, numpmid, j, ninstances)
-                    #print "inst: {}".format(res.vset[i].vlist[j].inst)
-                    print "tmp_idx: {}".format(tmp_idx)
-                    print "status: {}".format(status)
-                    print "data: {}".format(data)
-                    print "description: {}".format(description)
-                    #tmp_idx[10000000000000000000000000] = 2 # Beter crash
-                    
+                    pass # Add logging here 
                 for j in xrange(ninstances):
                     if res.vset[i].vlist[j].inst == 4294967295:
-                        print "inst isn't a real thing dudde"
-                        print "i {}/{}, j {}/{}".format(i, numpmid, j, ninstances)
-                        print "inst: {}".format(res.vset[i].vlist[j].inst)
-                        print "tmp_idx: {}".format(tmp_idx)
-                        print "data: {}".format(data)
-                        print "description: {}".format(description)
-                        tmp_idx[10000000000000000000000000] = 2 # Beter crash
+                        pass # Add logging here
                     tmp_idx[j] = res.vset[i].vlist[j].inst
                     # TODO - find way to just look for one name not generate list then find it in list
                     name = lookup(res.vset[i].vlist[j].inst, status, ivals, inames)          
                     if name == NULL:
-                        print "returned NULL"
-                        print "i {}/{}, j {}/{}".format(i, numpmid, j, ninstances)
-                        print "status: {}".format(status)
-                        print "inst: {}".format(res.vset[i].vlist[j].inst)
-                        print "tmp_idx: {}".format(tmp_idx)
-                        print "indomdict"
-                        for k in xrange(status):
-                            print "{} / {}".format(ivals[k], inames[k])
-                        print "data: {}".format(data)
-                        print "description: {}".format(description)
-                    #    return True, True # Skip this entry - no indom 
+                        pass # Possibly add logging here
                     tmp_names.append(name)   
                         
                 description.append([tmp_idx, tmp_names])
@@ -306,7 +280,6 @@ def extractpreprocValues(context, result, py_metric_id_array, mtypes):
                         inst = res.vset[i].vlist[j].inst 
                         status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], dtype, &atom, dtype)
                         if status < 0:
-                            print "Couldn't extract value"
                             return [], []
                         tmp_data.append([topyobj(atom, dtype), inst])
                 else:

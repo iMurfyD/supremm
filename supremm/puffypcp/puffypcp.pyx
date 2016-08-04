@@ -167,6 +167,7 @@ def extractValues(context, result, py_metric_id_array, mtypes):
     cdef pcp.pmDesc metric_desc
     cdef pcp.pmAtomValue atom
     cdef int dtype
+    cdef int allempty = 1
 
     if numpmid < 0:
         return None, None
@@ -193,6 +194,9 @@ def extractValues(context, result, py_metric_id_array, mtypes):
 
             # extractValueInneLoop does own looping 
             data.append(extractValuesInnerLoop(ninstances, res, dtype, i))
+            if len(data[i]) > 0:
+                allempty = 0 
+
             status = pcp.pmLookupDesc(metric_id_array[i], &metric_desc) 
             if status < 0:
                 PyMem_Free(metric_id_array)
@@ -228,6 +232,9 @@ def extractValues(context, result, py_metric_id_array, mtypes):
                 PyMem_Free(inames)
 
     PyMem_Free(metric_id_array)
+
+    if allempty:
+        return None, None
 
     return data, description
 

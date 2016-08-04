@@ -283,8 +283,6 @@ class RateConvertingTimeseriesPlugin(Plugin):
     def results(self):
 
         if len(self._hostdata) != self._job.nodecount:
-            import pdb
-            pdb.set_trace()
             return {"error": ProcessingError.INSUFFICIENT_HOSTDATA}
 
         values = self._data.get()

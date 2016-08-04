@@ -209,8 +209,6 @@ def extractValues(context, result, py_metric_id_array, mtypes):
                 PyMem_Free(inames)
                 PyMem_Free(metric_id_array)
                 return True, True
-                #data.append(numpy.empty(0, dtype=numpy.float64))
-                #description.append([numpy.empty(0, dtype=numpy.int64), []])
             else: 
                 if ninstances > status:
                     pass # Add logging here 

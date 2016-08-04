@@ -51,8 +51,7 @@ cdef object strinnerloop(int numval, pcp.pmResult* res, int i):
     for j in xrange(numval):
         status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_STRING, &atom, pcp.PM_TYPE_STRING)
         if status < 0:
-            print "Couldn't extract value"
-            return []
+            raise pmapi.pmErr(status)     
         tmp_data.append(str(atom.cp))
     return numpy.array(tmp_data)
 
@@ -65,8 +64,7 @@ cdef numpy.ndarray[double, ndim=1, mode="c"] int32innerloop(int numval, pcp.pmRe
     for j in xrange(numval):
         status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_32, &atom, pcp.PM_TYPE_32)
         if status < 0:
-            print "Couldn't extract value"
-            return numpy.empty(0, dtype=numpy.float64)
+            raise pmapi.pmErr(status)     
         tmp_data[j] = <double>atom.l
     return numpy.array(tmp_data)
 
@@ -80,8 +78,7 @@ cdef numpy.ndarray[double, ndim=1, mode="c"] uint32innerloop(int numval, pcp.pmR
         inst = res.vset[i].vlist[j].inst 
         status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_U32, &atom, pcp.PM_TYPE_U32)
         if status < 0:
-            return numpy.empty(0, dtype=numpy.float64)
-        tmp_data[j] = <double>atom.ul
+            raise pmapi.pmErr(status)     
     return numpy.array(tmp_data)
 
 cdef numpy.ndarray[double, ndim=1, mode="c"] int64innerloop(int numval, pcp.pmResult* res, int i):
@@ -94,8 +91,7 @@ cdef numpy.ndarray[double, ndim=1, mode="c"] int64innerloop(int numval, pcp.pmRe
         inst = res.vset[i].vlist[j].inst 
         status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_64, &atom, pcp.PM_TYPE_64)
         if status < 0:
-            print "Couldn't extract value"
-            return numpy.empty(0, dtype=numpy.float64)
+            raise pmapi.pmErr(status)     
         tmp_data[j] = <double>atom.ll
     return tmp_data
 
@@ -109,8 +105,7 @@ cdef numpy.ndarray[double, ndim=1, mode="c"] uint64innerloop(int numval, pcp.pmR
         inst = res.vset[i].vlist[j].inst 
         status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_U64, &atom, pcp.PM_TYPE_U64)
         if status < 0:
-            print "Couldn't extract value"
-            return numpy.empty(0, dtype=numpy.float64)
+            raise pmapi.pmErr(status)     
         tmp_data[j] = <double>atom.ull
     return numpy.array(tmp_data)
 
@@ -121,12 +116,11 @@ cdef numpy.ndarray[double, ndim=1, mode="c"] doubleinnerloop(int numval, pcp.pmR
     cdef numpy.ndarray[double, ndim=1, mode="c"] tmp_data = numpy.empty(numval, dtype=numpy.float64)
     cdef double* tmp_datap = &tmp_data[0]
     for j in xrange(numval):
-       inst = res.vset[i].vlist[j].inst 
-       status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_DOUBLE, &atom, pcp.PM_TYPE_DOUBLE)
-       if status < 0:
-           print "Couldn't extract value"
-           return numpy.empty(0, dtype=numpy.float64)
-       tmp_datap[j] = atom.d
+        inst = res.vset[i].vlist[j].inst 
+        status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_DOUBLE, &atom, pcp.PM_TYPE_DOUBLE)
+        if status < 0:
+            raise pmapi.pmErr(status)     
+        tmp_datap[j] = atom.d
     return tmp_data
 
 # All numeric types return numpy.float64 (c double) arrays
@@ -162,8 +156,8 @@ def extractValues(context, result, py_metric_id_array, mtypes):
     cdef Py_buffer buf
     PyObject_GetBuffer(result.contents, &buf, PyBUF_SIMPLE)
     cdef pcp.pmResult* res = <pcp.pmResult*> buf.buf
-    cdef int numpmid = res.numpmid
     cdef int ninstances
+    cdef int numpmid = res.numpmid
     cdef Py_ssize_t i, j, k
     cdef int ctx = context._ctx
     cdef int status, inst
@@ -240,14 +234,16 @@ def extractValues(context, result, py_metric_id_array, mtypes):
 def extractpreprocValues(context, result, py_metric_id_array, mtypes):
     data = []
     description = []
-   
+
     cdef Py_buffer buf
     PyObject_GetBuffer(result.contents, &buf, PyBUF_SIMPLE)
     cdef pcp.pmResult* res = <pcp.pmResult*> buf.buf
     cdef int mid_len = len(py_metric_id_array)
+    cdef int numpmid = res.numpmid
+    cdef int ninstances
     cdef Py_ssize_t i, j
     cdef int ctx = context._ctx
-    cdef int status, inst
+    cdef int status
     cdef int* ivals
     cdef char** inames
     cdef pcp.pmDesc metric_desc
@@ -256,46 +252,48 @@ def extractpreprocValues(context, result, py_metric_id_array, mtypes):
 
     if mid_len < 0:
         return None, None
-
     cdef pcp.pmID* metric_id_array = <pcp.pmID*>malloc(mid_len * sizeof(pcp.pmID))
+   
     for i in xrange(mid_len):
         metric_id_array[i] = py_metric_id_array[i] # Implicit py object to c data type conversion
     pcp.pmUseContext(ctx)
-      
+
+    # Initialize description
     for i in xrange(mid_len):
-        pcp.pmLookupDesc(metric_id_array[i], &metric_desc) 
-        if 4294967295 != metric_desc.indom:
-            status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
-            if status < 0: # TODO - add specific responses for different errors
-                free(metric_id_array)
-                return None, None
-            else:
-                tmp_dict = dict()
-                tmp_data = []
-                dtype = mtypes[i] 
-
-                if res.vset[i].numval == status:
-                    for j in xrange(status):
-                        tmp_dict[ivals[j]] = inames[j]
-                        inst = res.vset[i].vlist[j].inst 
-                        status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], dtype, &atom, dtype)
-                        if status < 0:
-                            return [], []
-                        tmp_data.append([topyobj(atom, dtype), inst])
-                else:
-                    for j in xrange(status):
-                        tmp_dict[ivals[j]] = inames[j]
-
-                description.append(tmp_dict)
-                data.append(tmp_data)
-                free(ivals)
-                free(inames)
-        else:
+        pcp.pmLookupDesc(metric_id_array[i], &metric_desc)
+        if 4294967295 == metric_desc.indom: # Missing indom - skip
+            continue 
+        status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
+        if status < 0:
             description.append({})
-            data.append(numpy.array([]))
+        else:
+            tmp_dict = dict()
+            for j in xrange(status):
+                tmp_dict[ivals[j]] = inames[j]
+            description.append(tmp_dict)         
+            free(ivals)
+            free(inames)
+
+    # Initialize data
+    for i in xrange(numpmid):
+        ninstances = res.vset[i].numval
+        ninstances = ninstances
+        pcp.pmLookupDesc(metric_id_array[i], &metric_desc)
+
+        tmp_data = []
+        dtype = mtypes[i]
+
+        for j in xrange(ninstances):
+            status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], dtype, &atom, dtype)
+            if status < 0:
+                print "Couldn't extract value"
+                tmp_data.append([])
+            else:
+                tmp_data.append([topyobj(atom, dtype), res.vset[i].vlist[j].inst])
+    
+        data.append(tmp_data)
 
     free(metric_id_array)
-
     return data, description
  
 def getindomdict(context, py_metric_id_array):

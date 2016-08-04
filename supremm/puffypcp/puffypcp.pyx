@@ -346,6 +346,7 @@ def loadrequiredmetrics(context, requiredMetrics):
     
     cdef pcp.pmID* required = <pcp.pmID*>PyMem_Malloc(num_met * sizeof(pcp.pmID*))
     status = pcp.pmLookupName(num_met, nameofmetrics, required)
+    PyMem_Free(nameofmetrics)
     if status < 0: # Add specific error messages
         PyMem_Free(required)
         return []

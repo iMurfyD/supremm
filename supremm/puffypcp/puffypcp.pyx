@@ -205,6 +205,8 @@ def extractValues(context, result, py_metric_id_array, mtypes):
                     PyMem_Free(metric_id_array)
                     return None, None
             elif ninstances > status: # Missing a few indoms - skip 
+                PyMem_Free(ivals)
+                PyMem_Free(inames)
                 PyMem_Free(metric_id_array)
                 return True, True
                 #data.append(numpy.empty(0, dtype=numpy.float64))

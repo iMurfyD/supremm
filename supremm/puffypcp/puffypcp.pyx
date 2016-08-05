@@ -79,6 +79,7 @@ cdef numpy.ndarray[double, ndim=1, mode="c"] uint32innerloop(int numval, pcp.pmR
         status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], pcp.PM_TYPE_U32, &atom, pcp.PM_TYPE_U32)
         if status < 0:
             raise pmapi.pmErr(status)     
+        tmp_data[j] = <double>atom.ul
     return numpy.array(tmp_data)
 
 cdef numpy.ndarray[double, ndim=1, mode="c"] int64innerloop(int numval, pcp.pmResult* res, int i):

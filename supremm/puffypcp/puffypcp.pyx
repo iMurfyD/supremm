@@ -153,7 +153,7 @@ cdef char* lookup(int val, int len, int* instlist, char** namelist):
 def extractValues(context, result, py_metric_id_array, mtypes):
     data = []
     description = []
-
+    
     cdef Py_buffer buf
     PyObject_GetBuffer(result.contents, &buf, PyBUF_SIMPLE)
     cdef pcp.pmResult* res = <pcp.pmResult*> buf.buf
@@ -193,7 +193,7 @@ def extractValues(context, result, py_metric_id_array, mtypes):
             tmp_names = []
             tmp_idx = numpy.empty(ninstances, dtype=int)
 
-            # extractValueInneLoop does own looping 
+            # extractValueInnerLoop does own looping 
             data.append(extractValuesInnerLoop(ninstances, res, dtype, i))
             if len(data[i]) > 0:
                 allempty = 0 

@@ -191,11 +191,11 @@ def extractValues(context, result, py_metric_id_array, mtypes):
         return None, None
 
     cdef pcp.pmID* metric_id_array = <pcp.pmID*>PyMem_Malloc(numpmid * sizeof(pcp.pmID))
+    mem.add(metric_id_array)
     cdef void* p = &metric_id_array
     cdef uintptr_t addr = <uintptr_t> p
     for i in xrange(numpmid):
         metric_id_array[i] = py_metric_id_array[i] # Implicit py object to c data type conversion 
-    mem.add(metric_id_array)
     pcp.pmUseContext(ctx)
 
     for i in xrange(numpmid):

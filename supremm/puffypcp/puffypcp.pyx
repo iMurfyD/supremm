@@ -210,7 +210,6 @@ def extractValues(context, result, py_metric_id_array, mtypes):
         elif ninstances == 0:
             data.append(numpy.empty(0, dtype=numpy.float64))
             description.append([numpy.empty(0, dtype=numpy.int64), []])
-            allempty = 0
         else:
             dtype = mtypes[i]       
             tmp_names = []

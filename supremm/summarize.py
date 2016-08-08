@@ -136,9 +136,10 @@ class Summarize(object):
         if data == None and description == None:
             return False
         elif data == True and description == True:
-            print "skipping ts"
+            logging.warning("%s %s missing indom @ %s", mdata.nodename, analytic.name, float(result.contents.timestamp))
+            self.logerror(mdata.nodename, analytic.name, "missing indom")
             return True # Skip this timestep
- 
+
         try:
             retval = analytic.process(mdata, float(result.contents.timestamp), data, description)
             return retval

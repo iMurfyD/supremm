@@ -40,8 +40,7 @@ cdef class Pool:
     cdef void add(self, void* p) except *:
         if p == NULL:
             raise MemoryError("Invalid pointer")
-        if <uintptr_t>p not in self.addresses:
-            self.addresses.append(<uintptr_t>p)
+        self.addresses.append(<uintptr_t>p)
 
 
 cdef object topyobj(pcp.pmAtomValue atom, int dtype):

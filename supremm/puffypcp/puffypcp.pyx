@@ -294,7 +294,7 @@ def extractpreprocValues(context, result, py_metric_id_array, mtypes):
         if 4294967295 == metric_desc.indom: # Missing indom - skip
             continue 
         status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
-        if status < 0:
+        if status <= 0:
             description.append({})
         else:
             mem.add(ivals)
@@ -316,7 +316,6 @@ def extractpreprocValues(context, result, py_metric_id_array, mtypes):
         for j in xrange(ninstances):
             status = pcp.pmExtractValue(res.vset[i].valfmt, &res.vset[i].vlist[j], dtype, &atom, dtype)
             if status < 0:
-                print "Couldn't extract value"
                 tmp_data.append([])
             else:
                 tmp_data.append([topyobj(atom, dtype), res.vset[i].vlist[j].inst])

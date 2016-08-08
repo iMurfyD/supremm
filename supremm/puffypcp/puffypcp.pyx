@@ -83,7 +83,7 @@ cdef numpy.ndarray[double, ndim=1, mode="c"] int32innerloop(int numval, pcp.pmRe
         if status < 0:
             raise pmapi.pmErr(status)     
         tmp_data[j] = <double>atom.l
-    return numpy.array(tmp_data)
+    return tmp_data
 
 cdef numpy.ndarray[double, ndim=1, mode="c"] uint32innerloop(int numval, pcp.pmResult* res, int i):
     cdef Py_ssize_t j
@@ -97,7 +97,7 @@ cdef numpy.ndarray[double, ndim=1, mode="c"] uint32innerloop(int numval, pcp.pmR
         if status < 0:
             raise pmapi.pmErr(status)     
         tmp_data[j] = <double>atom.ul
-    return numpy.array(tmp_data)
+    return tmp_data
 
 cdef numpy.ndarray[double, ndim=1, mode="c"] int64innerloop(int numval, pcp.pmResult* res, int i):
     cdef Py_ssize_t j
@@ -125,7 +125,7 @@ cdef numpy.ndarray[double, ndim=1, mode="c"] uint64innerloop(int numval, pcp.pmR
         if status < 0:
             raise pmapi.pmErr(status)     
         tmp_data[j] = <double>atom.ull
-    return numpy.array(tmp_data)
+    return tmp_data
 
 cdef numpy.ndarray[double, ndim=1, mode="c"] doubleinnerloop(int numval, pcp.pmResult* res, int i):
     cdef Py_ssize_t j
@@ -286,7 +286,7 @@ def extractpreprocValues(context, result, py_metric_id_array, mtypes):
     for i in xrange(mid_len):
         metric_id_array[i] = py_metric_id_array[i] # Implicit py object to c data type conversion
     pcp.pmUseContext(ctx)
-
+    
     # Initialize description
     for i in xrange(mid_len):
         pcp.pmLookupDesc(metric_id_array[i], &metric_desc)
@@ -318,10 +318,8 @@ def extractpreprocValues(context, result, py_metric_id_array, mtypes):
                 tmp_data.append([])
             else:
                 tmp_data.append([topyobj(atom, dtype), res.vset[i].vlist[j].inst])
-    
         data.append(tmp_data)
 
-    #print "end epreproc: {}".format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
     return data, description
  
 def getindomdict(context, py_metric_id_array):

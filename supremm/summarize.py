@@ -157,7 +157,7 @@ class Summarize(object):
             return False
 
         return preproc.process(float(result.contents.timestamp), data, description)
-    
+   
     def processforpreproc(self, ctx, mdata, preproc):
         """ fetch the data from the archive, reformat as a python data structure
         and call the analytic process function """

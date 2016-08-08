@@ -133,8 +133,6 @@ class Summarize(object):
         """ get the data and call the analytic """
 
         data, description = puffypcp.extractValues(ctx, result, metric_id_array, mtypes)
-        print analytic.name
-        print data 
         if data == None and description == None:
             return False
         elif data == True and description == True:

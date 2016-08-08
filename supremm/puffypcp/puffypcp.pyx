@@ -233,15 +233,6 @@ def extractValues(context, result, py_metric_id_array, mtypes):
             elif ninstances > status: # Missing a few indoms - try again
                 mem.add(ivals)
                 mem.add(inames)
-                print ninstances
-                print status
-                for k in xrange(status):
-                    print ivals[k]
-                    #print inames[k] 
-                for k in xrange(ninstances):
-                    print res.vset[i].vlist[k].inst
-
-
                 return True, True
             else: 
                 mem.add(ivals)

@@ -9,8 +9,6 @@ from ctypes import c_uint
 cimport pcp
 cimport numpy
 
-import resource
-
 cdef extern from "Python.h":
     PyObject* PyLong_FromLong(long)
     PyObject* PyLong_FromUnsignedLong(unsigned long)
@@ -170,8 +168,6 @@ def extractValues(context, result, py_metric_id_array, mtypes):
     description = []
     mem = Pool()
 
-    #print "extractValues: {}".format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) 
-    
     cdef Py_buffer buf 
     PyObject_GetBuffer(result.contents, &buf, PyBUF_SIMPLE)
     cdef pcp.pmResult* res = <pcp.pmResult*>buf.buf
@@ -256,14 +252,12 @@ def extractValues(context, result, py_metric_id_array, mtypes):
     if allempty:
         return None, None
 
-    #print "end extractVAl: {}".format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
     return data, description
 
 def extractpreprocValues(context, result, py_metric_id_array, mtypes):
     data = []
     description = []
     mem = Pool()
-    #print "begin epreproc: {}".format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
 
     cdef Py_buffer buf
     PyObject_GetBuffer(result.contents, &buf, PyBUF_SIMPLE)
@@ -331,7 +325,6 @@ def getindomdict(context, py_metric_id_array):
         The nth list entry is the nth metric in the metric_id_array
         @throw MissingIndomException if the instance information is not available
     """
-    #print "begin get indom: {}".format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
     mem = Pool()
     cdef int mid_len = len(py_metric_id_array)
     cdef pcp.pmID* metric_id_array = <pcp.pmID*>malloc(mid_len * sizeof(pcp.pmID))
@@ -363,12 +356,10 @@ def getindomdict(context, py_metric_id_array):
         else:
             indomdict.append({})
 
-    #print "end get indom: {}".format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
     return indomdict
 
 def loadrequiredmetrics(context, requiredMetrics):
     """ required metrics are those that must be present for the analytic to be run """
-    #print "begin load req: {}".format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
     mem = Pool()
     cdef int num_met = len(requiredMetrics)
     cdef int ctx = context._ctx 
@@ -393,14 +384,12 @@ def loadrequiredmetrics(context, requiredMetrics):
     for i in xrange(num_met):
         ret.append(required[i]) 
 
-    #print "end load req: {}".format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
     return ret
 
 def getmetricstofetch(context, analytic):
     """ returns the c_type data structure with the list of metrics requested
         for the analytic """
 
-    #print "begin getmetto: {}".format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
     metriclist = []
 
     for derived in analytic.derivedMetrics:
@@ -443,13 +432,11 @@ def getmetricstofetch(context, analytic):
     for i in xrange(0, len(metriclist)):
         metricarray[i] = metriclist[i]
 
-    #print "end getmetto: {}".format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
     return metricarray
 
 def getmetrictypes(context, py_metric_ids):
     """ returns a list with the datatype of the provided array of metric ids """
     mem = Pool()
-    #print "begin getmetto: {}".format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
 
     cdef int num_mid = len(py_metric_ids)
     cdef Py_ssize_t i
@@ -467,7 +454,6 @@ def getmetrictypes(context, py_metric_ids):
         ty = d.type
         metrictypes.append(ty)
 
-    #print "end getmetto: {}".format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
     return metrictypes
 
 def pcptypetonumpy(pcptype):

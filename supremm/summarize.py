@@ -132,7 +132,10 @@ class Summarize(object):
     def runcallback(self, analytic, result, mtypes, ctx, mdata, metric_id_array):
         """ get the data and call the analytic """
 
-        data, description = puffypcp.extractValues(ctx, result, metric_id_array, mtypes)
+        def logerr(err):
+            self.logerror(mdata.nodename, analytic.name, err)
+
+        data, description = puffypcp.extractValues(ctx, result, metric_id_array, mtypes, logerr)
         if data == None and description == None:
             return False
         elif data == True and description == True:

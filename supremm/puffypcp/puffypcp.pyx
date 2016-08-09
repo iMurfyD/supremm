@@ -52,8 +52,7 @@ cdef object topyobj(pcp.pmAtomValue atom, int dtype):
     elif dtype == pcp.PM_TYPE_DOUBLE:
         return long(atom.d)
     else: # Don't know how to handle data type
-        print "Unknown data type"
-        return long(atom.cp)
+        return None    
 
 cdef object strinnerloop(int numval, pcp.pmResult* res, int i):
     cdef Py_ssize_t j
@@ -153,7 +152,6 @@ cdef object extractValuesInnerLoop(Py_ssize_t numval, pcp.pmResult* res, int dty
     elif dtype == pcp.PM_TYPE_DOUBLE:
         return doubleinnerloop(numval, res, i)
     else: # Don't know how to handle data type
-        print "Don't know how to handle data type"
         return []
 
 cdef char* lookup(int val, int len, int* instlist, char** namelist):
@@ -163,7 +161,7 @@ cdef char* lookup(int val, int len, int* instlist, char** namelist):
             return namelist[i]
     return NULL
 
-def extractValues(context, result, py_metric_id_array, mtypes):
+def extractValues(context, result, py_metric_id_array, mtypes, logerr):
     data = []
     description = []
     mem = Pool()
@@ -185,6 +183,7 @@ def extractValues(context, result, py_metric_id_array, mtypes):
     cdef int allempty = 1
 
     if numpmid < 0:
+        logerr("negative number of pmid's")
         PyBuffer_Release(&buf) 
         return None, None
 
@@ -198,6 +197,7 @@ def extractValues(context, result, py_metric_id_array, mtypes):
         ninstances = res.vset[i].numval
         ninstances = ninstances
         if ninstances < 0:
+            logerr("negative number of instances")
             PyBuffer_Release(&buf) 
             return None, None
         # No instances, but there needs to be placeholders
@@ -213,6 +213,8 @@ def extractValues(context, result, py_metric_id_array, mtypes):
             data.append(extractValuesInnerLoop(ninstances, res, dtype, i))
             if len(data[i]) > 0:
                 allempty = 0 
+            elif data[i] == []:
+                logerr("unkown data type on extraction")
 
             status = pcp.pmLookupDesc(metric_id_array[i], &metric_desc) 
             if status < 0:

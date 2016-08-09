@@ -40,7 +40,9 @@ cdef class Pool:
 
 cdef object topyobj(pcp.pmAtomValue atom, int dtype):
     if dtype == pcp.PM_TYPE_STRING:
-        return str(atom.cp)
+        ret = str(atom.cp)
+        free(atom.cp)
+        return ret
     elif dtype == pcp.PM_TYPE_32:
         return long(atom.l)
     elif dtype == pcp.PM_TYPE_U32:

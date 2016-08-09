@@ -65,6 +65,7 @@ cdef object strinnerloop(int numval, pcp.pmResult* res, int i):
         if status < 0:
             raise pmapi.pmErr(status)     
         tmp_data.append(str(atom.cp))
+        free(atom.cp)
     return numpy.array(tmp_data)
 
 cdef numpy.ndarray[double, ndim=1, mode="c"] int32innerloop(int numval, pcp.pmResult* res, int i):

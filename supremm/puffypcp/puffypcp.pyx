@@ -9,12 +9,6 @@ from ctypes import c_uint
 cimport pcp
 cimport numpy
 
-cdef extern from "Python.h":
-    PyObject* PyLong_FromLong(long)
-    PyObject* PyLong_FromUnsignedLong(unsigned long)
-    PyObject* PyLong_FromLongLong(long long)
-    PyObject* PyLong_FromUnsignedLongLong(unsigned long long)
-
 # Memory pool
 # Dealloc's references when garbage collected
 # Inspired by spacey-io's cymem package (https://github.com/spacy-io/cymem)

@@ -178,7 +178,7 @@ def extractValues(context, result, py_metric_id_array, mtypes):
     cdef pcp.pmResult* res = <pcp.pmResult*> buf.buf
     cdef int ninstances
     cdef int numpmid = res.numpmid
-    cdef Py_ssize_t i, j, k
+    cdef Py_ssize_t i, j
     cdef int ctx = context._ctx
     cdef int status, inst
     cdef int* ivals

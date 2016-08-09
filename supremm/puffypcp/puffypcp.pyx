@@ -167,7 +167,7 @@ def extractValues(context, result, py_metric_id_array, mtypes, logerr):
     cdef int numpmid = res.numpmid
     cdef Py_ssize_t i, j
     cdef int ctx = context._ctx
-    cdef int status, inst
+    cdef int status
     cdef int* ivals
     cdef char** inames
     cdef char* name

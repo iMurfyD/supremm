@@ -1,5 +1,5 @@
 from pcp import pmapi
-from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
+from libc.stdlib cimport free, malloc
 from libc.stdint cimport uintptr_t, int32_t, uint32_t, int64_t, uint64_t
 import cpmapi as c_pmapi
 import numpy
@@ -35,13 +35,12 @@ cdef class Pool:
         if len(self.addresses) > 0:
             for addr in self.addresses:
                 if addr != 0:
-                    PyMem_Free(<void*>addr)
+                    free(<void*>addr)
 
     cdef void add(self, void* p) except *:
         if p == NULL:
             raise MemoryError("Invalid pointer")
         self.addresses.append(<uintptr_t>p)
-
 
 cdef object topyobj(pcp.pmAtomValue atom, int dtype):
     if dtype == pcp.PM_TYPE_STRING:
@@ -193,10 +192,8 @@ def extractValues(context, result, py_metric_id_array, mtypes):
     if numpmid < 0:
         return None, None
 
-    cdef pcp.pmID* metric_id_array = <pcp.pmID*>PyMem_Malloc(numpmid * sizeof(pcp.pmID))
+    cdef pcp.pmID* metric_id_array = <pcp.pmID*>malloc(numpmid * sizeof(pcp.pmID))
     mem.add(metric_id_array)
-    cdef void* p = &metric_id_array
-    cdef uintptr_t addr = <uintptr_t> p
     for i in xrange(numpmid):
         metric_id_array[i] = py_metric_id_array[i] # Implicit py object to c data type conversion 
     pcp.pmUseContext(ctx)
@@ -280,7 +277,7 @@ def extractpreprocValues(context, result, py_metric_id_array, mtypes):
 
     if mid_len < 0:
         return None, None
-    cdef pcp.pmID* metric_id_array = <pcp.pmID*>PyMem_Malloc(mid_len * sizeof(pcp.pmID))
+    cdef pcp.pmID* metric_id_array = <pcp.pmID*>malloc(mid_len * sizeof(pcp.pmID))
     mem.add(metric_id_array)  
  
     for i in xrange(mid_len):
@@ -330,7 +327,7 @@ def getindomdict(context, py_metric_id_array):
     #print "begin get indom: {}".format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
     mem = Pool()
     cdef int mid_len = len(py_metric_id_array)
-    cdef pcp.pmID* metric_id_array = <pcp.pmID*>PyMem_Malloc(mid_len * sizeof(pcp.pmID))
+    cdef pcp.pmID* metric_id_array = <pcp.pmID*>malloc(mid_len * sizeof(pcp.pmID))
     mem.add(metric_id_array)
     cdef Py_ssize_t i, j
     for i in xrange(mid_len):
@@ -371,12 +368,12 @@ def loadrequiredmetrics(context, requiredMetrics):
     pcp.pmUseContext(ctx)
     cdef Py_ssize_t i
     cdef int status
-    cdef char** nameofmetrics = <char**>PyMem_Malloc(num_met * sizeof(char*))
+    cdef char** nameofmetrics = <char**>malloc(num_met * sizeof(char*))
     mem.add(nameofmetrics)
     for i in xrange(num_met):
         nameofmetrics[i] = requiredMetrics[i]
     
-    cdef pcp.pmID* required = <pcp.pmID*>PyMem_Malloc(num_met * sizeof(pcp.pmID*))
+    cdef pcp.pmID* required = <pcp.pmID*>malloc(num_met * sizeof(pcp.pmID*))
     mem.add(required)
     status = pcp.pmLookupName(num_met, nameofmetrics, required)
     if status < 0: # Add specific error messages
@@ -449,7 +446,7 @@ def getmetrictypes(context, py_metric_ids):
 
     cdef int num_mid = len(py_metric_ids)
     cdef Py_ssize_t i
-    cdef pcp.pmID* metric_ids = <pcp.pmID*>PyMem_Malloc(num_mid * sizeof(pcp.pmID))
+    cdef pcp.pmID* metric_ids = <pcp.pmID*>malloc(num_mid * sizeof(pcp.pmID))
     mem.add(metric_ids) 
     for i in xrange(num_mid):
         metric_ids[i] = py_metric_ids[i]

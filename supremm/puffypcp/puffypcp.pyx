@@ -1,6 +1,7 @@
 from pcp import pmapi
 from libc.stdlib cimport free, malloc
 from libc.stdint cimport uintptr_t, int32_t, uint32_t, int64_t, uint64_t
+from cpython cimport Py_buffer, PyObject_GetBuffer, PyBuffer_Release, PyObject, PyBUF_SIMPLE
 import cpmapi as c_pmapi
 import numpy
 from ctypes import c_uint
@@ -11,11 +12,6 @@ cimport numpy
 import resource
 
 cdef extern from "Python.h":
-    ctypedef struct Py_buffer:
-        void* buf # Not sure if that's actual implementaion
-    int PyBUF_SIMPLE
-    int PyObject_GetBuffer(object, Py_buffer*, int)  
-    ctypedef void PyObject
     PyObject* PyLong_FromLong(long)
     PyObject* PyLong_FromUnsignedLong(unsigned long)
     PyObject* PyLong_FromLongLong(long long)
@@ -173,9 +169,9 @@ def extractValues(context, result, py_metric_id_array, mtypes):
 
     #print "extractValues: {}".format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) 
     
-    cdef Py_buffer buf
+    cdef Py_buffer buf 
     PyObject_GetBuffer(result.contents, &buf, PyBUF_SIMPLE)
-    cdef pcp.pmResult* res = <pcp.pmResult*> buf.buf
+    cdef pcp.pmResult* res = <pcp.pmResult*>buf.buf
     cdef int ninstances
     cdef int numpmid = res.numpmid
     cdef Py_ssize_t i, j
@@ -190,6 +186,7 @@ def extractValues(context, result, py_metric_id_array, mtypes):
     cdef int allempty = 1
 
     if numpmid < 0:
+        PyBuffer_Release(&buf) 
         return None, None
 
     cdef pcp.pmID* metric_id_array = <pcp.pmID*>malloc(numpmid * sizeof(pcp.pmID))
@@ -202,6 +199,7 @@ def extractValues(context, result, py_metric_id_array, mtypes):
         ninstances = res.vset[i].numval
         ninstances = ninstances
         if ninstances < 0:
+            PyBuffer_Release(&buf) 
             return None, None
         # No instances, but there needs to be placeholders
         elif ninstances == 0:
@@ -219,16 +217,19 @@ def extractValues(context, result, py_metric_id_array, mtypes):
 
             status = pcp.pmLookupDesc(metric_id_array[i], &metric_desc) 
             if status < 0:
+                PyBuffer_Release(&buf) 
                 return None, None
             status = pcp.pmGetInDom(metric_desc.indom, &ivals, &inames)
             if status < 0:
                 if len(data[i]) != 0: # Found data, so insert placeholder description
                     description.append([numpy.empty(0, dtype=numpy.int64), []])
                 else: 
+                    PyBuffer_Release(&buf) 
                     return None, None
             elif ninstances > status: # Missing a few indoms - try again
                 mem.add(ivals)
                 mem.add(inames)
+                PyBuffer_Release(&buf) 
                 return True, True
             else: 
                 mem.add(ivals)
@@ -246,8 +247,9 @@ def extractValues(context, result, py_metric_id_array, mtypes):
                     tmp_names.append(name)   
                         
                 description.append([tmp_idx, tmp_names])
- 
 
+
+    PyBuffer_Release(&buf) 
     if allempty:
         return None, None
 
@@ -276,6 +278,7 @@ def extractpreprocValues(context, result, py_metric_id_array, mtypes):
     cdef int dtype
 
     if mid_len < 0:
+        PyBuffer_Release(&buf) 
         return None, None
     cdef pcp.pmID* metric_id_array = <pcp.pmID*>malloc(mid_len * sizeof(pcp.pmID))
     mem.add(metric_id_array)  
@@ -317,6 +320,7 @@ def extractpreprocValues(context, result, py_metric_id_array, mtypes):
                 tmp_data.append([topyobj(atom, dtype), res.vset[i].vlist[j].inst])
         data.append(tmp_data)
 
+    PyBuffer_Release(&buf) 
     return data, description
  
 def getindomdict(context, py_metric_id_array):

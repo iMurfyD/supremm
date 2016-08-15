@@ -38,6 +38,7 @@ class FileOutput(object):
         self._file = open(self._path, 'w')
         self._jsonfile = open(self._path+'.json', 'w')
         self._jsonarray = []
+        self._dojson = True
 
     def __enter__(self):
         print ("Calling enter on file", file=self._file)
@@ -49,15 +50,17 @@ class FileOutput(object):
         """
         
         print(self._resid, json.dumps(summary.get(), indent=4), file=self._file)
-        self._jsonarray.append(summary.get())
-        self._jsonarray.append(mdata)
         print("MDATA: ", json.dumps(mdata, indent=4), file=self._file)
+        if self._dojson:
+            self._jsonarray.append(summary.get())
+            self._jsonarray.append(mdata)
 
     def __exit__(self, exception_type, exception_val, trace):
-        print(json.dumps(self._jsonarray, indent=4), file=self._jsonfile)
+        if self._dojson:
+            print(json.dumps(self._jsonarray, indent=4), file=self._jsonfile)
+            self._jsonfile.close()
         print("Calling exit on {}".format(self._file.name), file=self._file)
         self._file.close()
-        self._jsonfile.close()
 
 class MongoOutput(object):
     """ Support for mongodb output """
@@ -103,5 +106,5 @@ class StdoutOutput(FileOutput):
     def __init__(self, _, resconf):
         self._resid = resconf['resource_id']
         self._file = sys.stdout
-
+        self._dojson = False
 
